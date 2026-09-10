@@ -4,44 +4,78 @@ import {
   Anvil,
   Boxes,
   Bubbles,
+  CloudRain,
+  Droplet,
   Droplets,
+  Egg,
   Fish,
+  FishSymbol,
+  FishingHook,
   FlaskConical,
   Flower2,
   Gem,
   Heart,
   Hexagon,
   Leaf,
+  LifeBuoy,
   Mountain,
   Orbit,
+  Sailboat,
   Shell,
   Ship,
+  ShipWheel,
+  Shrimp,
+  Snail,
   Sparkles,
   Sun,
   Trees,
+  Turtle,
   Waves,
   Wind,
+  Worm,
   Zap,
 } from "lucide-react"
-import { parseTankIcon, type TankIconId, TANK_ICON_IDS, TANK_ICON_LABELS } from "@/lib/tank-icons"
+import {
+  parseTankIcon,
+  parseTankIconColor,
+  tankIconSwatch,
+  type TankIconId,
+  TANK_ICON_IDS,
+  TANK_ICON_LABELS,
+  TANK_ICON_PICKER_IDS,
+  TANK_ICON_COLOR_IDS,
+  TANK_ICON_COLORS,
+} from "@/lib/tank-icons"
 import { cn } from "@/lib/utils"
 
 const ICONS: Record<TankIconId, LucideIcon> = {
   waves: Waves,
   fish: Fish,
-  droplets: Droplets,
-  leaf: Leaf,
-  gem: Gem,
+  "fish-symbol": FishSymbol,
+  "fishing-hook": FishingHook,
+  shrimp: Shrimp,
+  snail: Snail,
+  turtle: Turtle,
+  worm: Worm,
   shell: Shell,
+  egg: Egg,
+  droplets: Droplets,
+  droplet: Droplet,
+  bubbles: Bubbles,
+  "cloud-rain": CloudRain,
+  leaf: Leaf,
+  flower: Flower2,
+  sun: Sun,
   anchor: Anchor,
+  sailboat: Sailboat,
   ship: Ship,
+  "ship-wheel": ShipWheel,
+  "life-buoy": LifeBuoy,
   flask: FlaskConical,
   sparkles: Sparkles,
-  sun: Sun,
+  gem: Gem,
   mountain: Mountain,
   trees: Trees,
-  flower: Flower2,
-  bubbles: Bubbles,
   orbit: Orbit,
   hexagon: Hexagon,
   boxes: Boxes,
@@ -65,26 +99,47 @@ export function TankIconGlyph({
 
 export function TankIconBadge({
   icon,
+  color,
   waterType,
   className,
   iconClassName,
 }: {
   icon?: string | null
+  color?: string | null
+  /** Used only when color is missing / invalid — emerald for FW, primary teal otherwise. */
   waterType?: string | null
   className?: string
   iconClassName?: string
 }) {
+  const swatch =
+    color != null && String(color) !== ""
+      ? tankIconSwatch(color)
+      : waterType === "freshwater"
+        ? TANK_ICON_COLORS.emerald.swatch
+        : TANK_ICON_COLORS.teal.swatch
+
   return (
     <span
       className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded-xl text-primary-foreground",
-        waterType === "freshwater" ? "bg-emerald-600" : "bg-primary",
+        "flex size-8 shrink-0 items-center justify-center rounded-xl text-white",
         className,
       )}
+      style={{ backgroundColor: swatch }}
     >
       <TankIconGlyph icon={icon} className={cn("size-3.5", iconClassName)} />
     </span>
   )
 }
 
-export { TANK_ICON_IDS, TANK_ICON_LABELS, parseTankIcon, type TankIconId, ICONS as TANK_LUCIDE_ICONS }
+export {
+  TANK_ICON_IDS,
+  TANK_ICON_LABELS,
+  TANK_ICON_PICKER_IDS,
+  TANK_ICON_COLOR_IDS,
+  TANK_ICON_COLORS,
+  parseTankIcon,
+  parseTankIconColor,
+  tankIconSwatch,
+  type TankIconId,
+  ICONS as TANK_LUCIDE_ICONS,
+}

@@ -246,6 +246,7 @@ export type Database = {
           water_type: Database["public"]["Enums"]["water_type"]
           default_test_kit: string | null
           icon: string
+          icon_color: string
         }
         Insert: {
           created_at?: string
@@ -267,6 +268,7 @@ export type Database = {
           water_type?: Database["public"]["Enums"]["water_type"]
           default_test_kit?: string | null
           icon?: string
+          icon_color?: string
         }
         Update: Partial<Database["public"]["Tables"]["tanks"]["Insert"]>
         Relationships: []

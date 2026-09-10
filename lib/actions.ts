@@ -12,7 +12,7 @@ import { parseTankType } from "@/lib/tank-profiles"
 import { defaultTimeZone, listTimeZones } from "@/lib/timezones"
 import { isKitId } from "@/lib/kits"
 import { parseLivestockSex, type LivestockSex } from "@/lib/bioload"
-import { parseTankIcon } from "@/lib/tank-icons"
+import { parseTankIcon, parseTankIconColor } from "@/lib/tank-icons"
 
 async function tankPrefs(supabase: Awaited<ReturnType<typeof createClient>>, tankId: string): Promise<UnitPrefs> {
   const { data } = await supabase
@@ -133,6 +133,7 @@ export async function upsertTank(formData: FormData) {
     length_unit: prefs.length,
     unit_system: legacyUnitSystem(prefs),
     icon: parseTankIcon(formData.get("icon")),
+    icon_color: parseTankIconColor(formData.get("icon_color")),
   }
   if (id) {
     const { error } = await supabase.from("tanks").update(payload).eq("id", id).eq("user_id", userId)

@@ -20,6 +20,7 @@ export default async function AppGroupLayout({ children }: { children: ReactNode
           gallons: item.gallons,
           water_type: item.water_type,
           icon: item.icon,
+          icon_color: item.icon_color,
           lastTestAt: lastTestByTank[item.id] ?? null,
         }))}
         activeTankId={tank?.id ?? null}

@@ -3,7 +3,15 @@
 import { upsertTank } from "@/lib/actions"
 import type { Tank } from "@/lib/bioload"
 import { SubmitButton } from "@/components/submit-button"
-import { TankIconGlyph, TANK_ICON_IDS, TANK_ICON_LABELS, parseTankIcon } from "@/components/tank-icon"
+import {
+  TankIconGlyph,
+  TANK_ICON_PICKER_IDS,
+  TANK_ICON_LABELS,
+  TANK_ICON_COLOR_IDS,
+  TANK_ICON_COLORS,
+  parseTankIcon,
+  parseTankIconColor,
+} from "@/components/tank-icon"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -42,6 +50,7 @@ export function TankForm({
   const [hasSump, setHasSump] = useState(Boolean(tank?.has_sump))
   const [sumpMedia, setSumpMedia] = useState<SumpMediaId[]>(() => initialSumpMedia(tank))
   const [icon, setIcon] = useState(() => parseTankIcon(tank?.icon))
+  const [iconColor, setIconColor] = useState(() => parseTankIconColor(tank?.icon_color))
   const volumeDefault = tank ? displayVolume(Number(tank.gallons), volumeUnit) : volumeUnit === "L" ? 150 : 40
   const sumpVolumeDefault = tank?.has_sump
     ? displayVolume(Number(tank.sump_gallons), volumeUnit)
@@ -73,6 +82,7 @@ export function TankForm({
       <input type="hidden" name="water_type" value={waterType} />
       <input type="hidden" name="has_sump" value={hasSump ? "true" : "false"} />
       <input type="hidden" name="icon" value={icon} />
+      <input type="hidden" name="icon_color" value={iconColor} />
       {sumpMedia.map((id) => (
         <input key={id} type="hidden" name="sump_media" value={id} />
       ))}
@@ -80,10 +90,10 @@ export function TankForm({
         <Label htmlFor="name">Name</Label>
         <Input id="name" name="name" defaultValue={tank?.name ?? "Display tank"} required />
       </div>
-      <div className="space-y-2 sm:col-span-2">
+      <div className="space-y-1.5 sm:col-span-2">
         <Label>Icon</Label>
-        <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
-          {TANK_ICON_IDS.map((id) => {
+        <div className="flex flex-wrap gap-1.5">
+          {TANK_ICON_PICKER_IDS.map((id) => {
             const selected = icon === id
             return (
               <button
@@ -94,14 +104,36 @@ export function TankForm({
                 aria-pressed={selected}
                 onClick={() => setIcon(id)}
                 className={cn(
-                  "flex aspect-square items-center justify-center rounded-xl border transition-colors",
+                  "flex size-8 items-center justify-center rounded-lg border transition-colors",
                   selected
-                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                    ? "border-transparent text-white shadow-sm ring-2 ring-foreground/20"
                     : "border-border bg-muted/40 text-muted-foreground hover:text-foreground",
                 )}
+                style={selected ? { backgroundColor: TANK_ICON_COLORS[iconColor].swatch } : undefined}
               >
-                <TankIconGlyph icon={id} className="size-4" />
+                <TankIconGlyph icon={id} className="size-3.5" />
               </button>
+            )
+          })}
+        </div>
+        <div className="flex flex-wrap gap-1.5 pt-0.5">
+          {TANK_ICON_COLOR_IDS.map((id) => {
+            const selected = iconColor === id
+            const { label, swatch } = TANK_ICON_COLORS[id]
+            return (
+              <button
+                key={id}
+                type="button"
+                title={label}
+                aria-label={label}
+                aria-pressed={selected}
+                onClick={() => setIconColor(id)}
+                className={cn(
+                  "size-6 rounded-full border-2 transition-transform",
+                  selected ? "scale-110 border-foreground" : "border-transparent hover:scale-105",
+                )}
+                style={{ backgroundColor: swatch }}
+              />
             )
           })}
         </div>

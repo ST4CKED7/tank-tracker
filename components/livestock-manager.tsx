@@ -3,14 +3,17 @@
 import { addCustomSpecies, addLivestock, removeLivestock, updateLivestock } from "@/lib/actions"
 import {
   CORAL_SIZE_LABELS,
+  LIVESTOCK_SEX_LABELS,
   type CoralSize,
   type LivestockRow,
+  type LivestockSex,
   type Species,
   type Tank,
 } from "@/lib/bioload"
 import { suggestAdditions } from "@/lib/compatibility"
 import type { ParameterKey } from "@/lib/parameters"
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/empty-state"
 import { SubmitButton } from "@/components/submit-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -22,12 +25,46 @@ import { displayLength, formatLength, formatVolume, lengthLabel, volumeLabel } f
 import { Badge } from "@/components/ui/badge"
 import { SpeciesImage } from "@/components/species-image"
 import { cn } from "@/lib/utils"
+import { staggerStyle } from "@/lib/motion"
+import { Fish } from "lucide-react"
 
 function kindBadgeClass(kind: string) {
   if (kind === "fish") return "border-teal-500/40 bg-teal-500/15 text-teal-800 dark:text-teal-200"
   if (kind === "coral") return "border-orange-400/40 bg-orange-400/15 text-orange-800 dark:text-orange-200"
   if (kind === "plant") return "border-emerald-500/40 bg-emerald-500/15 text-emerald-800 dark:text-emerald-200"
   return "border-violet-500/40 bg-violet-500/15 text-violet-800 dark:text-violet-200"
+}
+
+function sexBadgeClass(sex: LivestockSex) {
+  if (sex === "male") return "border-sky-500/40 bg-sky-500/15 text-sky-900 dark:text-sky-100"
+  if (sex === "female") return "border-rose-400/40 bg-rose-400/15 text-rose-900 dark:text-rose-100"
+  if (sex === "mixed") return "border-amber-500/40 bg-amber-500/15 text-amber-950 dark:text-amber-100"
+  return "border-muted-foreground/30 bg-muted/40 text-muted-foreground"
+}
+
+function SexSelect({
+  id,
+  defaultValue = "unknown",
+  className,
+}: {
+  id?: string
+  defaultValue?: LivestockSex
+  className?: string
+}) {
+  return (
+    <select
+      id={id}
+      name="sex"
+      defaultValue={defaultValue}
+      className={cn("h-8 rounded-md border bg-background px-2 text-sm", className)}
+    >
+      {(Object.keys(LIVESTOCK_SEX_LABELS) as LivestockSex[]).map((sex) => (
+        <option key={sex} value={sex}>
+          {LIVESTOCK_SEX_LABELS[sex]}
+        </option>
+      ))}
+    </select>
+  )
 }
 
 export function LivestockManager({
@@ -71,9 +108,20 @@ export function LivestockManager({
         <CardHeader>
           <CardTitle>In the tank</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {livestock.length === 0 ? <p className="text-sm text-muted-foreground">No livestock yet.</p> : null}
-          {livestock.map((item) => {
+        <CardContent className="tt-stagger space-y-3">
+          {livestock.length === 0 ? (
+            <EmptyState
+              icon={<Fish className="size-6" />}
+              title={fw ? "Nothing stocked yet" : "Your reef list is empty"}
+              description={
+                fw
+                  ? "Search the catalog for fish, plants, and cleanup crew. Targets and bioload tighten once animals are on the list."
+                  : "Add fish, coral, and cleanup crew so reef-safe checks and parameter windows match what you keep."
+              }
+              className="py-6 shadow-none"
+            />
+          ) : null}
+          {livestock.map((item, index) => {
             const lengthInches =
               item.current_length_inches != null
                 ? Number(item.current_length_inches)
@@ -81,7 +129,11 @@ export function LivestockManager({
                   ? Number(item.species.adult_length_inches ?? 0) || null
                   : null
             return (
-              <div key={item.id} className="space-y-3 rounded-xl border border-primary/10 bg-background/40 p-3">
+              <div
+                key={item.id}
+                style={staggerStyle(index)}
+                className="space-y-3 rounded-xl border border-primary/10 bg-background/40 p-3"
+              >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex min-w-0 items-start gap-3">
                     <SpeciesImage
@@ -101,6 +153,11 @@ export function LivestockManager({
                         <Badge variant="outline" className={cn("capitalize", kindBadgeClass(item.species.kind))}>
                           {item.species.kind}
                         </Badge>
+                        {item.species.kind === "fish" || item.species.kind === "invert" ? (
+                          <Badge variant="outline" className={sexBadgeClass(item.sex ?? "unknown")}>
+                            {LIVESTOCK_SEX_LABELS[item.sex ?? "unknown"]}
+                          </Badge>
+                        ) : null}
                       </div>
                       <div className="text-sm text-muted-foreground">{item.species.scientific_name}</div>
                       {item.nickname ? <div className="text-sm">{item.nickname}</div> : null}
@@ -127,7 +184,7 @@ export function LivestockManager({
                   </form>
                 </div>
 
-                {(item.species.kind === "fish" || item.species.kind === "coral") ? (
+                {(item.species.kind === "fish" || item.species.kind === "coral" || item.species.kind === "invert") ? (
                   <form action={updateLivestock} className="flex flex-wrap items-end gap-2 border-t border-primary/10 pt-3">
                     <input type="hidden" name="id" value={item.id} />
                     {unitFields}
@@ -150,6 +207,12 @@ export function LivestockManager({
                               : undefined
                           }
                         />
+                      </div>
+                    ) : null}
+                    {item.species.kind === "fish" || item.species.kind === "invert" ? (
+                      <div className="space-y-1">
+                        <Label htmlFor={`sex-${item.id}`}>Sex</Label>
+                        <SexSelect id={`sex-${item.id}`} defaultValue={item.sex ?? "unknown"} />
                       </div>
                     ) : null}
                     {item.species.kind === "coral" ? (
@@ -180,7 +243,7 @@ export function LivestockManager({
                         className="w-20"
                       />
                     </div>
-                    <SubmitButton size="sm" variant="secondary" pendingLabel="Updating…">
+                    <SubmitButton size="sm" variant="secondary" pendingLabel="Updating…" successMessage="Updated">
                       Update
                     </SubmitButton>
                   </form>
@@ -232,6 +295,9 @@ export function LivestockManager({
                       ))}
                     </select>
                   ) : null}
+                  {item.species.kind === "fish" || item.species.kind === "invert" ? (
+                    <SexSelect defaultValue="unknown" className="text-xs" />
+                  ) : null}
                   {item.species.kind === "fish" ? (
                     <Input
                       name="current_length"
@@ -247,7 +313,7 @@ export function LivestockManager({
                       }
                     />
                   ) : null}
-                  <SubmitButton size="sm" pendingLabel="Adding…">
+                  <SubmitButton size="sm" pendingLabel="Adding…" successMessage="Added to tank">
                     Add
                   </SubmitButton>
                 </div>
@@ -327,6 +393,12 @@ export function LivestockManager({
                     <Label htmlFor={`qty-${species.id}`}>Qty</Label>
                     <Input id={`qty-${species.id}`} name="quantity" type="number" min={1} defaultValue={1} className="w-20" />
                   </div>
+                  {species.kind === "fish" || species.kind === "invert" ? (
+                    <div>
+                      <Label htmlFor={`sex-${species.id}`}>Sex</Label>
+                      <SexSelect id={`sex-${species.id}`} defaultValue="unknown" />
+                    </div>
+                  ) : null}
                   {species.kind === "fish" ? (
                     <div>
                       <Label htmlFor={`flen-${species.id}`}>Size ({lengthLabel(prefs)})</Label>
@@ -362,7 +434,7 @@ export function LivestockManager({
                       </select>
                     </div>
                   ) : null}
-                  <SubmitButton size="sm" pendingLabel="Adding…">
+                  <SubmitButton size="sm" pendingLabel="Adding…" successMessage="Added to tank">
                     Add
                   </SubmitButton>
                 </div>
@@ -421,7 +493,7 @@ export function LivestockManager({
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea id="notes" name="notes" />
               </div>
-              <SubmitButton className="min-h-11" pendingLabel="Saving…">
+              <SubmitButton className="min-h-11" pendingLabel="Saving…" successMessage="Custom species saved">
                 Save species
               </SubmitButton>
             </form>

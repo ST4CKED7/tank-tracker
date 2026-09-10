@@ -4,12 +4,15 @@ import { useState } from "react"
 import { logDose } from "@/lib/actions"
 import type { Tables } from "@/lib/database.types"
 import { SubmitButton } from "@/components/submit-button"
+import { EmptyState } from "@/components/empty-state"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SeachemCalculator, type SeachemPrefill } from "@/components/seachem-calculator"
 import { useUnits } from "@/components/units-provider"
 import { format, parseISO } from "date-fns"
+import { Droplets } from "lucide-react"
+import { staggerStyle } from "@/lib/motion"
 
 export function DosingPanel({
   tankId,
@@ -112,7 +115,7 @@ export function DosingPanel({
                   )}
                 </select>
               </div>
-              <SubmitButton className="min-h-11 w-full sm:w-auto" pendingLabel="Saving…">
+              <SubmitButton className="min-h-11 w-full sm:w-auto" pendingLabel="Saving…" successMessage="Dose saved">
                 Save dose
               </SubmitButton>
             </form>
@@ -122,10 +125,21 @@ export function DosingPanel({
           <CardHeader>
             <CardTitle>History</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {doses.length === 0 ? <p className="text-sm text-muted-foreground">No doses yet.</p> : null}
-            {doses.map((dose) => (
-              <div key={dose.id} className="rounded-xl border border-primary/10 bg-background/40 px-3 py-2 text-sm">
+          <CardContent className="tt-stagger space-y-2">
+            {doses.length === 0 ? (
+              <EmptyState
+                icon={<Droplets className="size-6" />}
+                title="No doses logged yet"
+                description="Save a Seachem (or other) dose after you treat the water — history builds a quiet trail next to your test charts."
+                className="py-6 shadow-none"
+              />
+            ) : null}
+            {doses.map((dose, index) => (
+              <div
+                key={dose.id}
+                style={staggerStyle(index)}
+                className="rounded-xl border border-primary/10 bg-background/40 px-3 py-2 text-sm"
+              >
                 <div className="font-medium">
                   {dose.product} · {dose.amount} {dose.unit}
                 </div>

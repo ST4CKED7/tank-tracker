@@ -7,8 +7,7 @@ import { signOut } from "@/lib/actions"
 import { Button } from "@/components/ui/button"
 import { SubmitButton } from "@/components/submit-button"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { TankSwitcher } from "@/components/tank-switcher"
-import type { Tank } from "@/lib/bioload"
+import { TankSwitcher, type SwitcherTank } from "@/components/tank-switcher"
 import { cn } from "@/lib/utils"
 import {
   Beaker,
@@ -52,7 +51,7 @@ export function AppNav({
   activeTankId,
   unitSummary,
 }: {
-  tanks: Pick<Tank, "id" | "name" | "gallons" | "water_type">[]
+  tanks: SwitcherTank[]
   activeTankId: string | null
   unitSummary: string
 }) {

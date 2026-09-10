@@ -1,9 +1,18 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { logTest } from "@/lib/actions"
-import { API_COLOR_VALUES, parameterMeta, type ParameterKey, type WaterType } from "@/lib/parameters"
-import { KIT_DISCLAIMER, kitsFor, TEST_GUIDES, type KitId, type TestGuide } from "@/lib/kits"
+import { useEffect, useMemo, useState, useTransition } from "react"
+import { logTest, setDefaultTestKit } from "@/lib/actions"
+import { parameterMeta, type ParameterKey, type WaterType } from "@/lib/parameters"
+import {
+  KIT_CATEGORY_LABEL,
+  KIT_DISCLAIMER,
+  defaultKitFor,
+  kitsFor,
+  type KitCategory,
+  type KitId,
+  type TestGuide,
+  TEST_GUIDES,
+} from "@/lib/kits"
 import { Button } from "@/components/ui/button"
 import { SubmitButton } from "@/components/submit-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,6 +20,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useUnits } from "@/components/units-provider"
+import { Check, Star } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 function useCountdown(seconds: number | undefined, active: boolean) {
   const [left, setLeft] = useState(seconds ?? 0)
@@ -25,66 +36,158 @@ function useCountdown(seconds: number | undefined, active: boolean) {
   return left
 }
 
-export function TestLogger({ tankId, waterType = "saltwater" }: { tankId: string; waterType?: WaterType }) {
+const MANUAL_KITS: KitId[] = ["other", "instruments"]
+
+const CATEGORY_ORDER: KitCategory[] = ["liquid", "titration", "digital", "strips", "instrument"]
+
+export function TestLogger({
+  tankId,
+  waterType = "saltwater",
+  defaultKitId = null,
+}: {
+  tankId: string
+  waterType?: WaterType
+  defaultKitId?: string | null
+}) {
   const availableKits = useMemo(() => kitsFor(waterType), [waterType])
-  const defaultKit = availableKits[0]?.id ?? "other"
-  const [kit, setKit] = useState<KitId>(defaultKit)
+  const resolvedDefault = defaultKitFor(waterType, defaultKitId)
+  const [kit, setKit] = useState<KitId>(resolvedDefault)
+  const [savedDefault, setSavedDefault] = useState<KitId>(resolvedDefault)
   const [guideId, setGuideId] = useState("")
   const [drops, setDrops] = useState(20)
   const [value, setValue] = useState(waterType === "freshwater" ? "7.2" : "8.2")
   const [timerOn, setTimerOn] = useState(false)
+  const [pendingDefault, startDefault] = useTransition()
 
   useEffect(() => {
-    setKit(defaultKit)
-  }, [defaultKit])
+    const next = defaultKitFor(waterType, defaultKitId)
+    setKit(next)
+    setSavedDefault(next)
+  }, [waterType, defaultKitId])
 
-  const guides = useMemo(
-    () => TEST_GUIDES.filter((guide) => guide.kit === kit),
-    [kit],
-  )
+  const guides = useMemo(() => TEST_GUIDES.filter((guide) => guide.kit === kit), [kit])
   const guide = TEST_GUIDES.find((item) => item.id === guideId) ?? guides[0]
   const waitLeft = useCountdown(guide?.waitSeconds, timerOn)
   const shakeLeft = useCountdown(guide?.shakeSeconds, timerOn)
+  const isManual = MANUAL_KITS.includes(kit)
 
   useEffect(() => {
-    if (guides[0]) setGuideId(guides[0].id)
+    const first = guides[0]
+    if (first) {
+      setGuideId(first.id)
+      if (first.method === "titration") setDrops(first.parameter === "alkalinity" ? 8 : 20)
+      if (first.colorValues?.[0] != null) setValue(String(first.colorValues[0]))
+      else if (first.method !== "titration") setValue(waterType === "freshwater" ? "7.2" : "8.2")
+    }
     setTimerOn(false)
-  }, [kit, guides])
+  }, [kit, guides, waterType])
 
   const computed =
     guide?.method === "titration" && guide.titration
-      ? drops * guide.titration.dropUnit
+      ? Number((drops * guide.titration.dropUnit).toFixed(2))
       : Number(value)
 
+  const grouped = useMemo(() => {
+    const map = new Map<KitCategory, typeof availableKits>()
+    for (const category of CATEGORY_ORDER) map.set(category, [])
+    for (const item of availableKits) {
+      map.get(item.category)?.push(item)
+    }
+    return CATEGORY_ORDER.map((category) => ({
+      category,
+      label: KIT_CATEGORY_LABEL[category],
+      items: map.get(category) ?? [],
+    })).filter((group) => group.items.length > 0)
+  }, [availableKits])
+
+  function saveDefault(nextKit: KitId) {
+    const fd = new FormData()
+    fd.set("tank_id", tankId)
+    fd.set("kit", nextKit)
+    startDefault(async () => {
+      await setDefaultTestKit(fd)
+      setSavedDefault(nextKit)
+    })
+  }
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+    <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
       <Card>
         <CardHeader>
-          <CardTitle>Choose a kit</CardTitle>
+          <CardTitle>Choose a kit or method</CardTitle>
           <CardDescription>{KIT_DISCLAIMER}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {availableKits.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setKit(item.id)}
-              className={`min-h-11 w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors ${kit === item.id ? "border-primary bg-primary/10 shadow-sm" : "hover:bg-muted/60"}`}
-            >
-              <div className="font-medium">{item.label}</div>
-              <div className="text-muted-foreground">{item.tests.join(" · ")}</div>
-            </button>
+        <CardContent className="space-y-4">
+          {grouped.map((group) => (
+            <div key={group.category} className="space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                {group.label}
+              </div>
+              <div className="space-y-2">
+                {group.items.map((item) => {
+                  const selected = kit === item.id
+                  const isDefault = savedDefault === item.id
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setKit(item.id)}
+                      className={cn(
+                        "min-h-11 w-full rounded-xl border px-3 py-2.5 text-left text-sm transition-colors",
+                        selected ? "border-primary bg-primary/10 shadow-sm" : "hover:bg-muted/60",
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="font-medium leading-snug">{item.shortLabel}</div>
+                        {isDefault ? (
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-background/80 px-1.5 py-0.5 text-[10px] font-medium text-primary ring-1 ring-primary/20">
+                            <Star className="size-2.5 fill-current" />
+                            Default
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">{item.blurb}</div>
+                      <div className="mt-1 text-[11px] text-muted-foreground/90">{item.tests.join(" · ")}</div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           ))}
+
+          <Button
+            type="button"
+            variant="secondary"
+            className="min-h-11 w-full"
+            disabled={pendingDefault || savedDefault === kit}
+            onClick={() => saveDefault(kit)}
+          >
+            {savedDefault === kit ? (
+              <>
+                <Check className="size-4" />
+                Default kit
+              </>
+            ) : (
+              <>
+                <Star className="size-4" />
+                {pendingDefault ? "Saving…" : "Set as my default"}
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>{guide?.title ?? "Other tests"}</CardTitle>
-          <CardDescription>{guide?.kitLabel ?? "Manual entry"}</CardDescription>
+          <CardTitle>{isManual ? "Log a reading" : (guide?.title ?? "Pick a test")}</CardTitle>
+          <CardDescription>
+            {isManual
+              ? availableKits.find((item) => item.id === kit)?.label ?? "Manual entry"
+              : (guide?.kitLabel ?? "Guided test")}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {kit !== "other" ? (
+          {!isManual && guides.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {guides.map((item) => (
                 <Button
@@ -95,6 +198,9 @@ export function TestLogger({ tankId, waterType = "saltwater" }: { tankId: string
                   onClick={() => {
                     setGuideId(item.id)
                     setTimerOn(false)
+                    if (item.method === "titration") setDrops(item.parameter === "alkalinity" ? 8 : 20)
+                    if (item.colorValues?.[0] != null) setValue(String(item.colorValues[0]))
+                    else setValue("")
                   }}
                 >
                   {item.title}
@@ -103,8 +209,8 @@ export function TestLogger({ tankId, waterType = "saltwater" }: { tankId: string
             </div>
           ) : null}
 
-          {kit === "other" ? (
-            <OtherParams tankId={tankId} waterType={waterType} />
+          {isManual ? (
+            <ManualParams tankId={tankId} waterType={waterType} kit={kit} />
           ) : guide ? (
             <>
               <GuideSteps guide={guide} waitLeft={waitLeft} shakeLeft={shakeLeft} timerOn={timerOn} setTimerOn={setTimerOn} />
@@ -119,7 +225,9 @@ export function TestLogger({ tankId, waterType = "saltwater" }: { tankId: string
                 waterType={waterType}
               />
             </>
-          ) : null}
+          ) : (
+            <ManualParams tankId={tankId} waterType={waterType} kit={kit} />
+          )}
         </CardContent>
       </Card>
     </div>
@@ -159,12 +267,12 @@ function GuideSteps({
             Start timers
           </Button>
           {guide.shakeSeconds ? (
-            <span className={shakeLeft === 0 && timerOn ? "text-primary font-medium" : ""}>
+            <span className={shakeLeft === 0 && timerOn ? "font-medium text-primary" : ""}>
               Shake: {timerOn ? `${shakeLeft}s` : `${guide.shakeSeconds}s`}
             </span>
           ) : null}
           {guide.waitSeconds ? (
-            <span className={waitLeft === 0 && timerOn ? "text-primary font-medium" : ""}>
+            <span className={waitLeft === 0 && timerOn ? "font-medium text-primary" : ""}>
               Wait: {timerOn ? `${waitLeft}s` : `${guide.waitSeconds}s`}
             </span>
           ) : null}
@@ -195,7 +303,7 @@ function LogForm({
 }) {
   const system = useUnits()
   const meta = parameterMeta(system, waterType)[guide.parameter]
-  const colors = API_COLOR_VALUES[guide.parameter]
+  const colors = guide.colorValues
 
   return (
     <form action={logTest} className="grid gap-3 rounded-xl border border-primary/10 bg-background/40 p-4 sm:grid-cols-2">
@@ -210,6 +318,7 @@ function LogForm({
             id="drops"
             type="number"
             min={0}
+            step={1}
             value={drops}
             onChange={(e) => setDrops(Number(e.target.value) || 0)}
           />
@@ -217,12 +326,28 @@ function LogForm({
             Result: <span className="font-medium text-foreground">{computed}</span> {guide.titration.unit}
             {" "}({guide.titration.startColor} → {guide.titration.endColor})
           </p>
-          <input type="hidden" name="value" value={computed} />
+          <p className="text-xs text-muted-foreground">
+            Or enter the booklet result below if your drop factor differs.
+          </p>
+          <Label htmlFor="override" className="text-xs">
+            Override value (optional)
+          </Label>
+          <Input
+            id="override"
+            name="value"
+            type="number"
+            step="0.01"
+            placeholder={String(computed)}
+            defaultValue={computed}
+            key={`${guide.id}-${computed}`}
+          />
         </div>
       ) : (
         <div className="space-y-1 sm:col-span-2">
-          <Label htmlFor="value">{meta.label} ({meta.unit || "—"})</Label>
-          {colors ? (
+          <Label htmlFor="value">
+            {meta.label} ({meta.unit || "—"})
+          </Label>
+          {colors?.length ? (
             <select
               id="value"
               name="value"
@@ -237,25 +362,51 @@ function LogForm({
               ))}
             </select>
           ) : (
-            <Input id="value" name="value" type="number" step="0.01" value={value} onChange={(e) => setValue(e.target.value)} required />
+            <Input
+              id="value"
+              name="value"
+              type="number"
+              step="0.01"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              required
+            />
           )}
         </div>
       )}
       <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="notes">Notes</Label>
-        <Textarea id="notes" name="notes" placeholder="Optional" />
+        <Textarea id="notes" name="notes" placeholder="Optional — kit lot, time of day, etc." />
       </div>
-      <SubmitButton className="min-h-11" pendingLabel="Saving…">
+      <SubmitButton className="min-h-11" pendingLabel="Saving…" successMessage="Reading saved">
         Save reading
       </SubmitButton>
     </form>
   )
 }
 
-function OtherParams({ tankId, waterType }: { tankId: string; waterType: WaterType }) {
+function manualKeys(waterType: WaterType, kit: KitId): ParameterKey[] {
+  if (kit === "instruments") {
+    return waterType === "freshwater"
+      ? ["temperature", "ph"]
+      : ["salinity", "temperature", "ph"]
+  }
+  return waterType === "freshwater"
+    ? ["ph", "ammonia", "nitrite", "nitrate", "alkalinity", "temperature"]
+    : ["ph", "ammonia", "nitrite", "nitrate", "calcium", "alkalinity", "phosphate", "salinity", "temperature"]
+}
+
+function ManualParams({
+  tankId,
+  waterType,
+  kit,
+}: {
+  tankId: string
+  waterType: WaterType
+  kit: KitId
+}) {
   const system = useUnits()
-  const keys: ParameterKey[] =
-    waterType === "freshwater" ? ["temperature", "alkalinity"] : ["salinity", "temperature"]
+  const keys = manualKeys(waterType, kit)
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {keys.map((parameter) => {
@@ -265,10 +416,12 @@ function OtherParams({ tankId, waterType }: { tankId: string; waterType: WaterTy
             <input type="hidden" name="tank_id" value={tankId} />
             <input type="hidden" name="parameter" value={parameter} />
             <input type="hidden" name="unit" value={meta.unit} />
-            <input type="hidden" name="source_kit" value="other" />
-            <Label htmlFor={parameter}>{meta.label} ({meta.unit})</Label>
+            <input type="hidden" name="source_kit" value={kit} />
+            <Label htmlFor={`${kit}-${parameter}`}>
+              {meta.label} ({meta.unit})
+            </Label>
             <Input
-              id={parameter}
+              id={`${kit}-${parameter}`}
               name="value"
               type="number"
               step="0.01"
@@ -277,26 +430,30 @@ function OtherParams({ tankId, waterType }: { tankId: string; waterType: WaterTy
                 parameter === "salinity"
                   ? "35"
                   : parameter === "alkalinity"
-                    ? "5"
-                    : system.temp === "C"
-                      ? "26"
-                      : "78"
+                    ? waterType === "freshwater"
+                      ? "5"
+                      : "8"
+                    : parameter === "calcium"
+                      ? "420"
+                      : parameter === "temperature"
+                        ? system.temp === "C"
+                          ? "26"
+                          : "78"
+                        : undefined
               }
             />
             <p className="text-xs text-muted-foreground">
               {parameter === "salinity"
-                ? "Use a refractometer. Natural seawater is about 35 ppt (1.026 SG)."
-                : parameter === "alkalinity"
-                  ? "KH / carbonate hardness — many community tanks sit around 3–8 dKH."
-                  : waterType === "freshwater"
-                    ? system.temp === "C"
-                      ? "Most tropical community tanks do best around 24–28°C."
-                      : "Most tropical community tanks do best around 72–82°F."
-                    : system.temp === "C"
-                      ? "Most reefs do best around 24–27°C."
-                      : "Most reefs do best around 76–80°F."}
+                ? "Refractometer or conductivity meter. Natural seawater ≈ 35 ppt (1.026 SG)."
+                : parameter === "temperature"
+                  ? system.temp === "C"
+                    ? "Digital thermometer or controller readout (°C)."
+                    : "Digital thermometer or controller readout (°F)."
+                  : parameter === "ph" && kit === "instruments"
+                    ? "Calibrated pH probe or meter."
+                    : "Enter the value from your kit, strip, or meter."}
             </p>
-            <SubmitButton className="min-h-11" pendingLabel="Saving…">
+            <SubmitButton className="min-h-11" pendingLabel="Saving…" successMessage={`${meta.label} saved`}>
               Save {meta.label}
             </SubmitButton>
           </form>

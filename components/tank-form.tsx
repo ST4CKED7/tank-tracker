@@ -223,7 +223,9 @@ export function TankForm({ tank, mode = "auto" }: { tank: Tank | null; mode?: "a
               ))}
             </select>
           </div>
-          <SubmitButton className="min-h-11 sm:min-h-8">{isCreate ? "Create tank" : "Save tank"}</SubmitButton>
+          <SubmitButton className="min-h-11 sm:min-h-8" successMessage={isCreate ? "Tank created" : "Tank saved"}>
+            {isCreate ? "Create tank" : "Save tank"}
+          </SubmitButton>
         </form>
       </CardContent>
     </Card>

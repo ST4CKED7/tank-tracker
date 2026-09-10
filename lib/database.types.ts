@@ -105,6 +105,7 @@ export type Database = {
           id: string
           nickname: string | null
           quantity: number
+          sex: Database["public"]["Enums"]["livestock_sex"]
           species_id: string
           tank_id: string
           user_id: string
@@ -116,6 +117,7 @@ export type Database = {
           id?: string
           nickname?: string | null
           quantity?: number
+          sex?: Database["public"]["Enums"]["livestock_sex"]
           species_id: string
           tank_id: string
           user_id: string
@@ -127,6 +129,7 @@ export type Database = {
           id?: string
           nickname?: string | null
           quantity?: number
+          sex?: Database["public"]["Enums"]["livestock_sex"]
           species_id?: string
           tank_id?: string
           user_id?: string
@@ -241,6 +244,7 @@ export type Database = {
           water_change_interval_days: number
           water_change_percent: number
           water_type: Database["public"]["Enums"]["water_type"]
+          default_test_kit: string | null
         }
         Insert: {
           created_at?: string
@@ -260,6 +264,7 @@ export type Database = {
           water_change_interval_days?: number
           water_change_percent?: number
           water_type?: Database["public"]["Enums"]["water_type"]
+          default_test_kit?: string | null
         }
         Update: Partial<Database["public"]["Tables"]["tanks"]["Insert"]>
         Relationships: []
@@ -340,6 +345,7 @@ export type Database = {
     }
     Enums: {
       coral_size: "frag" | "small" | "colony"
+      livestock_sex: "male" | "female" | "unknown" | "mixed"
       reef_safe: "yes" | "caution" | "no"
       species_kind: "fish" | "coral" | "invert" | "plant"
       tank_type: "fowlr" | "mixed_reef" | "sps_reef" | "lps_reef" | "softie_reef" | "nano_reef" | "community" | "planted" | "aquascape" | "african_cichlid" | "discus" | "shrimp" | "goldfish"

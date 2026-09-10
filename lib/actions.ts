@@ -10,6 +10,8 @@ import { resolveSpeciesImageUrl } from "@/lib/species-image"
 import { parseSumpMedia } from "@/lib/sump-media"
 import { parseTankType } from "@/lib/tank-profiles"
 import { defaultTimeZone, listTimeZones } from "@/lib/timezones"
+import { isKitId } from "@/lib/kits"
+import { parseLivestockSex, type LivestockSex } from "@/lib/bioload"
 
 async function tankPrefs(supabase: Awaited<ReturnType<typeof createClient>>, tankId: string): Promise<UnitPrefs> {
   const { data } = await supabase
@@ -142,6 +144,21 @@ export async function upsertTank(formData: FormData) {
   revalidateTankShell()
 }
 
+export async function setDefaultTestKit(formData: FormData) {
+  const { supabase, userId } = await requireUser()
+  const tankId = String(formData.get("tank_id") || "")
+  const kit = String(formData.get("kit") || "")
+  if (!tankId || !isKitId(kit)) return
+  const { error } = await supabase
+    .from("tanks")
+    .update({ default_test_kit: kit })
+    .eq("id", tankId)
+    .eq("user_id", userId)
+  if (error) throw error
+  revalidatePath("/tests")
+  revalidateTankShell()
+}
+
 export async function updateUnitPrefs(formData: FormData) {
   const { supabase, userId } = await requireUser()
   const tankId = String(formData.get("tank_id") || "")
@@ -238,6 +255,7 @@ export async function addLivestock(formData: FormData) {
     quantity: Number(formData.get("quantity") || 1),
     coral_size: coralSize,
     current_length_inches: currentLength,
+    sex: parseLivestockSex(formData.get("sex")),
     added_on: String(formData.get("added_on") || new Date().toISOString().slice(0, 10)),
   })
   if (error) throw error
@@ -256,6 +274,7 @@ export async function updateLivestock(formData: FormData) {
     coral_size?: "frag" | "small" | "colony" | null
     current_length_inches?: number | null
     nickname?: string | null
+    sex?: LivestockSex
   } = {}
   if (formData.has("quantity")) payload.quantity = Number(formData.get("quantity") || 1)
   if (formData.has("coral_size")) payload.coral_size = coralSize
@@ -267,6 +286,9 @@ export async function updateLivestock(formData: FormData) {
   }
   if (formData.has("nickname")) {
     payload.nickname = String(formData.get("nickname") || "") || null
+  }
+  if (formData.has("sex")) {
+    payload.sex = parseLivestockSex(formData.get("sex"))
   }
   const { error } = await supabase.from("livestock").update(payload).eq("id", String(formData.get("id")))
   if (error) throw error

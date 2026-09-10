@@ -63,6 +63,22 @@ export const getActiveTankContext = cache(async () => {
   return { tanks, tank }
 })
 
+/** Latest test timestamp per tank — for the switcher tray. */
+export const getTankLastTestMap = cache(async () => {
+  const { supabase, userId } = await getAuthedUserId()
+  const { data } = await supabase
+    .from("test_logs")
+    .select("tank_id, tested_at")
+    .eq("user_id", userId)
+    .order("tested_at", { ascending: false })
+    .limit(500)
+  const map: Record<string, string> = {}
+  for (const row of data ?? []) {
+    if (!map[row.tank_id]) map[row.tank_id] = row.tested_at
+  }
+  return map
+})
+
 function limitOf(value: boolean | number | undefined, fallback: number) {
   if (value === false || value == null) return 0
   if (value === true) return fallback

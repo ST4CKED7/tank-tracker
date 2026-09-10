@@ -140,3 +140,43 @@
     @apply font-sans;
   }
 }
+
+@layer utilities {
+  @keyframes tt-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes tt-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  .tt-fade-in {
+    animation: tt-fade-in 320ms ease-out both;
+  }
+  .tt-fade-up {
+    animation: tt-fade-up 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .tt-stagger > * {
+    animation: tt-fade-up 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tt-fade-in,
+    .tt-fade-up,
+    .tt-stagger > * {
+      animation: none !important;
+    }
+  }
+  .tt-toast-success {
+    animation: tt-fade-up 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}

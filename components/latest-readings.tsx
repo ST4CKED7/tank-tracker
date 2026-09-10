@@ -36,9 +36,13 @@ export function LatestReadings({ latest }: { latest: Partial<Record<ParameterKey
   const meta = parameterMeta(system)
   const keys = Object.keys(meta) as ParameterKey[]
   return (
-    <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-      {keys.map((key) => (
-        <div key={key} className="min-w-0 rounded-2xl border border-primary/10 bg-card/80 p-2.5 shadow-sm backdrop-blur sm:p-3">
+    <div className="tt-stagger grid grid-cols-2 gap-2 md:grid-cols-3">
+      {keys.map((key, index) => (
+        <div
+          key={key}
+          style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+          className="min-w-0 rounded-2xl border border-primary/10 bg-card/80 p-2.5 shadow-sm backdrop-blur sm:p-3"
+        >
           <div className="truncate text-[10px] uppercase tracking-wide text-muted-foreground sm:text-xs">
             {meta[key].label}
           </div>

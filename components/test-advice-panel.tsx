@@ -6,27 +6,35 @@ import { unitPrefsFromTank } from "@/lib/units"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { AlertTriangle, CheckCircle2, Info, Wrench } from "lucide-react"
+import { staggerStyle } from "@/lib/motion"
+import { AlertTriangle, CheckCircle2, Info, Leaf, Waves, Wrench } from "lucide-react"
 
 function severityStyles(severity: AdviceSeverity) {
   switch (severity) {
     case "urgent":
-      return "border-rose-500/40 bg-rose-500/5"
+      return "border-teal-700/30 bg-teal-700/8 dark:border-teal-400/25 dark:bg-teal-400/10"
     case "action":
-      return "border-amber-500/35 bg-amber-500/5"
+      return "border-sky-600/25 bg-sky-500/8 dark:border-sky-400/25 dark:bg-sky-400/10"
     case "watch":
-      return "border-amber-500/20 bg-background/40"
+      return "border-primary/20 bg-primary/5"
     case "ok":
-      return "border-emerald-500/30 bg-emerald-500/5"
+      return "border-emerald-500/25 bg-emerald-500/8"
     default:
-      return "border-primary/15 bg-background/40"
+      return "border-primary/15 bg-background/50"
   }
+}
+
+function sourceLabel(source?: "livestock" | "typical" | "trend", freshwater?: boolean) {
+  if (source === "livestock") return "Based on livestock targets"
+  if (source === "typical") return freshwater ? "Typical freshwater default" : "Typical reef default"
+  if (source === "trend") return "From recent trend"
+  return null
 }
 
 function SeverityIcon({ severity }: { severity: AdviceSeverity }) {
   if (severity === "ok") return <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
   if (severity === "urgent" || severity === "action") {
-    return <AlertTriangle className="size-4 text-amber-700 dark:text-amber-300" />
+    return <AlertTriangle className="size-4 text-teal-800 dark:text-teal-200" />
   }
   if (severity === "info") return <Info className="size-4 text-primary" />
   return <Wrench className="size-4 text-muted-foreground" />
@@ -45,10 +53,10 @@ export function TestAdvicePanel({
   livestock: LivestockRow[]
   tests: { parameter: string; tested_at: string; value: number }[]
   waterChanges: { changed_at: string }[]
-  /** Home: hide the all-clear card and info-only noise. */
   compact?: boolean
 }) {
   const prefs = unitPrefsFromTank(tank)
+  const freshwater = tank.water_type === "freshwater"
   let advice = buildTestAdvice({
     tank,
     latest,
@@ -64,39 +72,59 @@ export function TestAdvicePanel({
   }
 
   return (
-    <Card>
+    <Card className="tt-fade-up">
       <CardHeader>
         <CardTitle>{compact ? "Suggested next steps" : "After your readings"}</CardTitle>
         <CardDescription>
           {compact
-            ? "Based on latest tests vs your livestock and typical targets."
+            ? "Targets prefer livestock overlap, then typical defaults."
             : "Suggestions update when you save a test — water changes, dosing, or cycle checks."}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {advice.map((item) => (
-          <div
-            key={item.id}
-            className={cn("space-y-2 rounded-xl border px-3 py-3", severityStyles(item.severity))}
-          >
-            <div className="flex items-start gap-2">
-              <SeverityIcon severity={item.severity} />
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="font-medium leading-snug">{item.title}</div>
-                <p className="text-sm text-muted-foreground">{item.detail}</p>
-                {item.actions.length > 0 ? (
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {item.actions.map((action) => (
-                      <Button key={action.href + action.label} asChild size="sm" variant="secondary" className="min-h-10">
-                        <Link href={action.href}>{action.label}</Link>
-                      </Button>
-                    ))}
-                  </div>
-                ) : null}
+      <CardContent className="tt-stagger space-y-3">
+        {advice.map((item, index) => {
+          const source = sourceLabel(item.source, freshwater)
+          return (
+            <div
+              key={item.id}
+              style={staggerStyle(index)}
+              className={cn("space-y-2 rounded-xl border px-3 py-3", severityStyles(item.severity))}
+            >
+              <div className="flex items-start gap-2">
+                <SeverityIcon severity={item.severity} />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="font-medium leading-snug">{item.title}</div>
+                  {source ? (
+                    <div className="inline-flex items-center gap-1 rounded-full bg-background/70 px-2 py-0.5 text-[11px] text-muted-foreground ring-1 ring-border/60">
+                      {item.source === "livestock" ? (
+                        <Leaf className="size-3" />
+                      ) : (
+                        <Waves className="size-3" />
+                      )}
+                      {source}
+                    </div>
+                  ) : null}
+                  <p className="text-sm text-muted-foreground">{item.detail}</p>
+                  {item.actions.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {item.actions.map((action) => (
+                        <Button
+                          key={action.href + action.label}
+                          asChild
+                          size="sm"
+                          variant="secondary"
+                          className="min-h-10"
+                        >
+                          <Link href={action.href}>{action.label}</Link>
+                        </Button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </CardContent>
     </Card>
   )

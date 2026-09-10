@@ -130,7 +130,7 @@ export function RemindersPanel({
             />
           </div>
           <div className="flex items-end">
-            <SubmitButton className="w-full min-h-11" pendingLabel="Logging…">
+            <SubmitButton className="w-full min-h-11" pendingLabel="Logging…" successMessage="Water change logged">
               Log water change
             </SubmitButton>
           </div>

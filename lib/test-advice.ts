@@ -25,6 +25,8 @@ export type TestAdvice = {
   title: string
   detail: string
   actions: TestAdviceAction[]
+  /** Where the target came from when relevant. */
+  source?: "livestock" | "typical" | "trend"
 }
 
 type TestPoint = { parameter: string; tested_at: string; value: number }
@@ -152,8 +154,9 @@ export function buildTestAdvice(input: {
         id: "nitrate-high",
         parameter: "nitrate",
         severity: over > nitrateTarget.max ? "action" : "watch",
+        source: nitrateTarget.source,
         title: "Nitrate above target",
-        detail: `${formatReading("nitrate", nitrate, input.prefs, waterType)} vs ${formatTarget("nitrate", nitrateTarget, input.prefs, waterType)} (${nitrateTarget.source}). A water change is the fastest fix; check bioload and feeding if it climbs again.`,
+        detail: `${formatReading("nitrate", nitrate, input.prefs, waterType)} vs ${formatTarget("nitrate", nitrateTarget, input.prefs, waterType)}. A water change is the fastest fix; check bioload and feeding if it climbs again.`,
         actions: [wc, { label: "Review livestock bioload", href: "/livestock" }],
       })
     }
@@ -170,6 +173,7 @@ export function buildTestAdvice(input: {
       id: "nitrate-rising",
       parameter: "nitrate",
       severity: "watch",
+      source: "trend",
       title: "Nitrate keeps climbing",
       detail:
         "Recent nitrate readings are rising even with water changes. Consider a larger change, fewer feedings, or more cleanup crew / export.",
@@ -188,6 +192,7 @@ export function buildTestAdvice(input: {
         id: "alkalinity",
         parameter: "alkalinity",
         severity: far ? "action" : "watch",
+        source: alkTarget.source,
         title: low
           ? fw
             ? "KH is low"
@@ -217,6 +222,7 @@ export function buildTestAdvice(input: {
         id: "calcium",
         parameter: "calcium",
         severity: outside > 40 ? "action" : "watch",
+        source: caTarget.source,
         title: low ? "Calcium is low" : "Calcium is high",
         detail: low
           ? `${formatReading("calcium", calcium, input.prefs, waterType)} vs ${formatTarget("calcium", caTarget, input.prefs, waterType)}. Dose calcium (keep alk in step if you run two-part) and retest.`
@@ -233,6 +239,7 @@ export function buildTestAdvice(input: {
       id: "phosphate",
       parameter: "phosphate",
       severity: phosphate > po4Target.max * 3 ? "action" : "watch",
+      source: po4Target.source,
       title: "Phosphate above target",
       detail: `${formatReading("phosphate", phosphate, input.prefs, waterType)} vs ${formatTarget("phosphate", po4Target, input.prefs, waterType)}. Water change, reduce feeding, and consider media / export if it stays high.`,
       actions: [wc, doseAction("Log phosphate treatment")],
@@ -249,6 +256,7 @@ export function buildTestAdvice(input: {
         id: "ph",
         parameter: "ph",
         severity: outside >= 0.3 ? "action" : "watch",
+        source: phTarget.source,
         title: low ? "pH is low" : "pH is high",
         detail: low
           ? `${formatReading("ph", ph, input.prefs, waterType)} vs ${formatTarget("ph", phTarget, input.prefs, waterType)}. ${
@@ -279,6 +287,7 @@ export function buildTestAdvice(input: {
         id: "salinity",
         parameter: "salinity",
         severity: outside >= 1 ? "action" : "watch",
+        source: salTarget.source,
         title: low ? "Salinity is low" : "Salinity is high",
         detail: low
           ? `${formatReading("salinity", salinity, input.prefs, waterType)} vs ${formatTarget("salinity", salTarget, input.prefs, waterType)}. Top off evaporation with saltwater (not freshwater) or mix a slightly saltier change.`
@@ -298,6 +307,7 @@ export function buildTestAdvice(input: {
         id: "temperature",
         parameter: "temperature",
         severity: outside >= 3 ? "action" : "watch",
+        source: tempTarget.source,
         title: low ? "Temperature is low" : "Temperature is high",
         detail: `${formatReading("temperature", temperature, input.prefs, waterType)} vs ${formatTarget("temperature", tempTarget, input.prefs, waterType)}. Adjust the heater${low ? "" : " / add cooling or reduce lights"} and recheck in an hour.`,
         actions: [{ label: "Gear checklist", href: "/equipment" }],

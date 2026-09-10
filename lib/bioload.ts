@@ -5,6 +5,20 @@ export type Tank = Tables<"tanks">
 export type Species = Tables<"species_catalog">
 export type LivestockRow = Tables<"livestock"> & { species: Species }
 export type CoralSize = NonNullable<Tables<"livestock">["coral_size"]>
+export type LivestockSex = Tables<"livestock">["sex"]
+
+export const LIVESTOCK_SEX_LABELS: Record<LivestockSex, string> = {
+  male: "Male",
+  female: "Female",
+  unknown: "Unknown",
+  mixed: "Mixed",
+}
+
+export function parseLivestockSex(value: unknown): LivestockSex {
+  const raw = String(value || "")
+  if (raw === "male" || raw === "female" || raw === "mixed" || raw === "unknown") return raw
+  return "unknown"
+}
 
 /** Soft bioload points for coral footprint / nutrient demand. */
 export const CORAL_SIZE_POINTS: Record<CoralSize, number> = {

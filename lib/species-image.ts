@@ -1,7 +1,7 @@
 export function tidyScientificName(scientific: string | null | undefined) {
   if (!scientific) return null
   const cleaned = scientific
-    .split("/")[0]
+    .split(/[/×x]+/i)[0]
     .replace(/\bspp\.?\b/gi, "")
     .replace(/\bsp\.\b/gi, "")
     .replace(/\s+/g, " ")
@@ -18,13 +18,12 @@ function queryVariants(scientificName: string | null | undefined, commonName: st
   const cleanedCommon = commonName.replace(/^NOT RECOMMENDED\s+/i, "").trim()
   const binomial = scientific && scientific.includes(" ") ? scientific : null
   const variants = [
-    binomial,
+    // Prefer common aquarium names first — hybrids/morphs resolve poorly from parent binomials
     cleanedCommon,
     cleanedCommon.replace(/'/g, ""),
-    // Genus-only wiki lookups are often wrong (e.g. Turbo → turbocharger); use with "snail"/taxon hints only.
+    binomial,
     scientificName?.includes("spp") && genus ? genus : null,
     scientificName?.includes("spp") && genus ? `${genus} coral` : null,
-    // Plants often resolve better with an aquarium/plant hint than bare genus
     /plant|fern|moss|anubias|crypt|sword|vallis|hygrophila|rotala|ludwigia|bacopa|hairgrass|hornwort|frogbit|duckweed|lotus|buceph|bolbitis|marimo/i.test(
       `${cleanedCommon} ${scientificName ?? ""}`,
     )

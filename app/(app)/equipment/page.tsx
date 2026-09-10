@@ -15,7 +15,11 @@ export default async function EquipmentPage() {
   if (!data.tank) return <TankForm tank={null} />
   return (
     <div className="space-y-4">
-      <PageHero kicker="Maintenance" title="Equipment" description="Track skimmers, media, lights, and service dates." />
+      <PageHero
+        kicker="Maintenance"
+        title="Equipment"
+        description="Filters, pumps, lights, reactors, dosers, probes — log what you run and when it needs service."
+      />
       <EquipmentPanel tankId={data.tank.id} equipment={data.equipment} />
     </div>
   )

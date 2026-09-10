@@ -247,6 +247,7 @@ export type Database = {
           default_test_kit: string | null
           icon: string
           icon_color: string
+          color_theme: string
         }
         Insert: {
           created_at?: string
@@ -269,6 +270,7 @@ export type Database = {
           default_test_kit?: string | null
           icon?: string
           icon_color?: string
+          color_theme?: string
         }
         Update: Partial<Database["public"]["Tables"]["tanks"]["Insert"]>
         Relationships: []

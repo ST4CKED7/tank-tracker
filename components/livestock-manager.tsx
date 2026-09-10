@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useMemo, useState } from "react"
 import { useUnits } from "@/components/units-provider"
-import { displayLength, formatLength, formatVolume, lengthLabel, volumeLabel } from "@/lib/units"
+import { displayLength, formatLength, formatTempRange, formatVolume, lengthLabel, volumeLabel, type UnitPrefs } from "@/lib/units"
 import { Badge } from "@/components/ui/badge"
 import { SpeciesImage } from "@/components/species-image"
 import { cn } from "@/lib/utils"
@@ -40,6 +40,10 @@ function sexBadgeClass(sex: LivestockSex) {
   if (sex === "female") return "border-rose-400/40 bg-rose-400/15 text-rose-900 dark:text-rose-100"
   if (sex === "mixed") return "border-amber-500/40 bg-amber-500/15 text-amber-950 dark:text-amber-100"
   return "border-muted-foreground/30 bg-muted/40 text-muted-foreground"
+}
+
+function speciesTempLine(species: Species, prefs: UnitPrefs) {
+  return formatTempRange(species.temp_min, species.temp_max, prefs)
 }
 
 function SexSelect({
@@ -163,6 +167,12 @@ export function LivestockManager({
                       {item.nickname ? (
                         <div className="text-sm text-muted-foreground">Name: {item.nickname}</div>
                       ) : null}
+                      {(() => {
+                        const temp = speciesTempLine(item.species, prefs)
+                        return temp ? (
+                          <div className="text-sm text-muted-foreground">Recommended temp {temp}</div>
+                        ) : null
+                      })()}
                       {item.species.kind === "fish" && lengthInches ? (
                         <div className="text-sm text-muted-foreground">
                           Current size {formatLength(lengthInches, prefs)}
@@ -293,6 +303,11 @@ export function LivestockManager({
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{item.species.common_name}</div>
                   <p className="text-sm text-muted-foreground">{item.reasons[0]}</p>
+                  {speciesTempLine(item.species, prefs) ? (
+                    <p className="text-xs text-muted-foreground">
+                      Recommended temp {speciesTempLine(item.species, prefs)}
+                    </p>
+                  ) : null}
                   {item.projectedBioloadPercent != null ? (
                     <p className="text-xs text-muted-foreground">
                       Would put bioload at {Math.round(item.projectedBioloadPercent)}%
@@ -430,6 +445,7 @@ export function LivestockManager({
                     <p className="mt-1">{species.notes}</p>
                     <p className="mt-1 text-muted-foreground">
                       Min {species.min_tank_gallons != null ? formatVolume(Number(species.min_tank_gallons), prefs) : "—"}
+                      {speciesTempLine(species, prefs) ? ` · temp ${speciesTempLine(species, prefs)}` : null}
                       {fw ? null : ` · reef-safe ${species.reef_safe}`}
                       {species.kind === "fish" && species.adult_length_inches != null
                         ? ` · adult ${formatLength(Number(species.adult_length_inches), prefs)}`

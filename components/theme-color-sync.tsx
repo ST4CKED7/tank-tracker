@@ -1,28 +1,36 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
+import { parseTankTheme, tankThemeMeta } from "@/lib/tank-themes"
 
-const LIGHT = "#f4f7f8"
-const DARK = "#0b1214"
-const BRAND = "#0f766e"
-
-/** Keep browser chrome / installed PWA status bar in sync with next-themes. */
+/** Keep browser chrome / installed PWA status bar in sync with light/dark + tank color theme. */
 export function ThemeColorSync() {
   const { resolvedTheme } = useTheme()
+  const [themeId, setThemeId] = useState("ocean")
+
+  useEffect(() => {
+    const read = () => setThemeId(parseTankTheme(document.documentElement.getAttribute("data-theme")))
+    read()
+    const observer = new MutationObserver(read)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] })
+    return () => observer.disconnect()
+  }, [])
+
+  const meta = tankThemeMeta(themeId)
 
   useEffect(() => {
     const dark = resolvedTheme === "dark"
-    const color = dark ? DARK : LIGHT
+    const color = dark ? meta.chrome.dark : meta.chrome.light
 
     const metas = document.querySelectorAll('meta[name="theme-color"]')
     if (metas.length === 0) {
-      const meta = document.createElement("meta")
-      meta.name = "theme-color"
-      meta.content = color
-      document.head.appendChild(meta)
+      const el = document.createElement("meta")
+      el.name = "theme-color"
+      el.content = color
+      document.head.appendChild(el)
     } else {
-      metas.forEach((meta) => meta.setAttribute("content", color))
+      metas.forEach((el) => el.setAttribute("content", color))
     }
 
     let status = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
@@ -34,17 +42,7 @@ export function ThemeColorSync() {
     status.setAttribute("content", dark ? "black-translucent" : "default")
 
     document.documentElement.style.colorScheme = dark ? "dark" : "light"
-  }, [resolvedTheme])
-
-  useEffect(() => {
-    // Brand tint while bootstrapping before theme resolves.
-    if (!document.querySelector('meta[name="theme-color"]')) {
-      const meta = document.createElement("meta")
-      meta.name = "theme-color"
-      meta.content = BRAND
-      document.head.appendChild(meta)
-    }
-  }, [])
+  }, [resolvedTheme, meta.chrome.dark, meta.chrome.light])
 
   return null
 }

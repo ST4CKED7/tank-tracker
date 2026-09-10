@@ -17,11 +17,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SUMP_MEDIA_OPTIONS, type SumpMediaId } from "@/lib/sump-media"
 import { defaultTankType, profilesForWater } from "@/lib/tank-profiles"
+import { TANK_THEME_IDS, TANK_THEMES, parseTankTheme } from "@/lib/tank-themes"
 import { defaultTimeZone, timeZoneGroups } from "@/lib/timezones"
 import { displayVolume, unitPrefsFromTank, volumeLabel, type VolumeUnit } from "@/lib/units"
 import { useUnits } from "@/components/units-provider"
 import { cn } from "@/lib/utils"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 function initialSumpMedia(tank: Tank | null): SumpMediaId[] {
   if (!tank?.sump_media?.length) return []
@@ -51,6 +52,7 @@ export function TankForm({
   const [sumpMedia, setSumpMedia] = useState<SumpMediaId[]>(() => initialSumpMedia(tank))
   const [icon, setIcon] = useState(() => parseTankIcon(tank?.icon))
   const [iconColor, setIconColor] = useState(() => parseTankIconColor(tank?.icon_color))
+  const [colorTheme, setColorTheme] = useState(() => parseTankTheme(tank?.color_theme))
   const volumeDefault = tank ? displayVolume(Number(tank.gallons), volumeUnit) : volumeUnit === "L" ? 150 : 40
   const sumpVolumeDefault = tank?.has_sump
     ? displayVolume(Number(tank.sump_gallons), volumeUnit)
@@ -75,6 +77,13 @@ export function TankForm({
     setSumpMedia((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))
   }
 
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", colorTheme)
+    return () => {
+      document.documentElement.setAttribute("data-theme", parseTankTheme(tank?.color_theme))
+    }
+  }, [colorTheme, tank?.color_theme])
+
   const fields = (
     <form action={formAction ?? upsertTank} className="grid gap-3 sm:grid-cols-2">
       {tank ? <input type="hidden" name="id" value={tank.id} /> : null}
@@ -83,12 +92,51 @@ export function TankForm({
       <input type="hidden" name="has_sump" value={hasSump ? "true" : "false"} />
       <input type="hidden" name="icon" value={icon} />
       <input type="hidden" name="icon_color" value={iconColor} />
+      <input type="hidden" name="color_theme" value={colorTheme} />
       {sumpMedia.map((id) => (
         <input key={id} type="hidden" name="sump_media" value={id} />
       ))}
       <div className="space-y-1 sm:col-span-2">
         <Label htmlFor="name">Name</Label>
         <Input id="name" name="name" defaultValue={tank?.name ?? "Display tank"} required />
+      </div>
+      <div className="space-y-1.5 sm:col-span-2">
+        <Label>Color theme</Label>
+        <p className="text-xs text-muted-foreground">
+          Applies to this tank’s pages. Use the sun/moon control for light or dark within the theme.
+        </p>
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+          {TANK_THEME_IDS.map((id) => {
+            const meta = TANK_THEMES[id]
+            const selected = colorTheme === id
+            return (
+              <button
+                key={id}
+                type="button"
+                title={meta.blurb}
+                aria-pressed={selected}
+                onClick={() => setColorTheme(id)}
+                className={cn(
+                  "flex flex-col gap-1.5 rounded-xl border px-2 py-2 text-left transition-colors",
+                  selected
+                    ? "border-primary bg-primary/10 ring-2 ring-primary/25"
+                    : "border-border bg-background/60 hover:bg-muted/50",
+                )}
+              >
+                <span className="flex gap-1">
+                  {meta.swatches.map((swatch) => (
+                    <span
+                      key={swatch}
+                      className="size-3.5 rounded-full ring-1 ring-black/10"
+                      style={{ backgroundColor: swatch }}
+                    />
+                  ))}
+                </span>
+                <span className="text-xs font-medium leading-tight">{meta.label}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
       <div className="space-y-1.5 sm:col-span-2">
         <Label>Icon</Label>

@@ -6,6 +6,7 @@ import { PageHero } from "@/components/page-hero"
 import { PullToRefresh } from "@/components/pull-to-refresh"
 import { RemindersPanel } from "@/components/reminders-panel"
 import { TankForm } from "@/components/tank-form"
+import { TemperatureLogCard } from "@/components/temperature-log-card"
 import { TestAdvicePanel } from "@/components/test-advice-panel"
 import { TodayStrip } from "@/components/today-strip"
 import { detectAnomalies } from "@/lib/anomalies"
@@ -140,6 +141,14 @@ export default async function HomePage() {
         />
 
         <TodayStrip overdue={overdue} outOfRange={outOfRange} anomalies={anomalies} primary={primary} />
+
+        <TemperatureLogCard
+          tankId={data.tank.id}
+          lastValueF={data.latest.temperature ?? null}
+          lastAt={
+            data.tests.find((test) => test.parameter === "temperature")?.tested_at ?? null
+          }
+        />
 
         {Object.keys(data.latest).length === 0 ? (
           <EmptyState

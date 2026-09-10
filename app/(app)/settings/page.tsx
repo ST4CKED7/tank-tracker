@@ -22,7 +22,7 @@ export default async function SettingsPage() {
       <PageHero
         kicker="Setup"
         title="Settings"
-        description="Manage tanks and choose hybrid display units — gallons with Celsius, liters with inches, whatever you prefer."
+        description="Manage tanks, color themes (with light/dark), and hybrid display units."
       />
 
       <InstallAppCard />

@@ -170,6 +170,24 @@ export function formatLength(inches: number, prefs: UnitPrefs | LengthUnit | Uni
   return `${displayLength(inches, prefs)} ${lengthLabel(prefs)}`
 }
 
+export function formatTemp(fahrenheit: number, prefs: UnitPrefs | TempUnit | UnitSystem) {
+  return `${displayTemp(fahrenheit, prefs)} ${tempLabel(prefs)}`
+}
+
+/** Species catalog stores °F; format a recommended range in the user's unit. */
+export function formatTempRange(
+  minF: number | null | undefined,
+  maxF: number | null | undefined,
+  prefs: UnitPrefs | TempUnit | UnitSystem,
+) {
+  if (minF == null && maxF == null) return null
+  if (minF != null && maxF != null) {
+    return `${displayTemp(Number(minF), prefs)}–${displayTemp(Number(maxF), prefs)} ${tempLabel(prefs)}`
+  }
+  if (minF != null) return `≥ ${formatTemp(Number(minF), prefs)}`
+  return `≤ ${formatTemp(Number(maxF!), prefs)}`
+}
+
 export function unitPrefsSummary(prefs: UnitPrefs) {
   return `${volumeLabel(prefs)}, ${tempLabel(prefs)}, ${lengthLabel(prefs)}`
 }

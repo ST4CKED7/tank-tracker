@@ -6,7 +6,7 @@ import { assessCleanupCrew } from "@/lib/cleanup-crew"
 import { suggestCleanupCrew } from "@/lib/compatibility"
 import type { ParameterKey } from "@/lib/parameters"
 import { SpeciesImage } from "@/components/species-image"
-import { Button } from "@/components/ui/button"
+import { SubmitButton } from "@/components/submit-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useUnits } from "@/components/units-provider"
 import { cn } from "@/lib/utils"
@@ -88,9 +88,9 @@ export function CleanupCrewPanel({
                     <p className="truncate text-xs text-muted-foreground">{item.reasons[0]}</p>
                   </div>
                 </div>
-                <Button type="submit" size="sm" variant="secondary">
+                <SubmitButton size="sm" variant="secondary" pendingLabel="Adding…">
                   Add
-                </Button>
+                </SubmitButton>
               </form>
             ))}
           </div>

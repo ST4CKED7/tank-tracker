@@ -6,6 +6,7 @@ import { waterChangeGallons, type Reminder } from "@/lib/reminders"
 import { saltMixForGallons } from "@/lib/salt-mix"
 import type { Tank } from "@/lib/bioload"
 import { Button } from "@/components/ui/button"
+import { SubmitButton } from "@/components/submit-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -129,7 +130,9 @@ export function RemindersPanel({
             />
           </div>
           <div className="flex items-end">
-            <Button type="submit" className="w-full">Log water change</Button>
+            <SubmitButton className="w-full min-h-11" pendingLabel="Logging…">
+              Log water change
+            </SubmitButton>
           </div>
         </form>
       </CardContent>

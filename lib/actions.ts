@@ -27,16 +27,13 @@ async function requireUser() {
   return { supabase, userId: data.claims.sub as string }
 }
 
-function revalidateTankPaths() {
-  revalidatePath("/", "layout")
-  revalidatePath("/")
-  revalidatePath("/settings")
-  revalidatePath("/tests")
-  revalidatePath("/charts")
-  revalidatePath("/cycle")
-  revalidatePath("/livestock")
-  revalidatePath("/dosing")
-  revalidatePath("/equipment")
+function revalidateAppPaths(...paths: string[]) {
+  for (const path of paths) revalidatePath(path)
+}
+
+/** Tank identity / prefs changed — refresh shell consumers. */
+function revalidateTankShell() {
+  revalidateAppPaths("/", "/settings", "/livestock", "/tests", "/dosing", "/equipment", "/charts", "/cycle")
 }
 
 export async function signOut() {
@@ -53,7 +50,7 @@ export async function setActiveTank(formData: FormData) {
   const { data } = await supabase.from("tanks").select("id").eq("id", tankId).eq("user_id", userId).maybeSingle()
   if (!data) return
   await writeActiveTankIdCookie(data.id)
-  revalidateTankPaths()
+  revalidateTankShell()
 }
 
 export async function deleteTank(formData: FormData) {
@@ -84,7 +81,7 @@ export async function deleteTank(formData: FormData) {
   if (remaining?.[0]?.id) await writeActiveTankIdCookie(remaining[0].id)
   else await clearActiveTankIdCookie()
 
-  revalidateTankPaths()
+  revalidateTankShell()
   redirect("/settings")
 }
 
@@ -142,7 +139,7 @@ export async function upsertTank(formData: FormData) {
     if (error) throw error
     if (data?.id) await writeActiveTankIdCookie(data.id)
   }
-  revalidateTankPaths()
+  revalidateTankShell()
 }
 
 export async function updateUnitPrefs(formData: FormData) {
@@ -165,7 +162,7 @@ export async function updateUnitPrefs(formData: FormData) {
     .eq("id", tankId)
     .eq("user_id", userId)
   if (error) throw error
-  revalidateTankPaths()
+  revalidateTankShell()
 }
 
 export async function logTest(formData: FormData) {
@@ -190,10 +187,7 @@ export async function logTest(formData: FormData) {
     tested_at: String(formData.get("tested_at") || new Date().toISOString()),
   })
   if (error) throw error
-  revalidatePath("/")
-  revalidatePath("/tests")
-  revalidatePath("/charts")
-  revalidatePath("/cycle")
+  revalidateAppPaths("/", "/tests", "/charts", "/cycle")
 }
 
 export async function logWaterChange(formData: FormData) {
@@ -209,9 +203,7 @@ export async function logWaterChange(formData: FormData) {
     changed_at: String(formData.get("changed_at") || new Date().toISOString()),
   })
   if (error) throw error
-  revalidatePath("/")
-  revalidatePath("/tests")
-  revalidatePath("/charts")
+  revalidateAppPaths("/", "/tests", "/charts")
 }
 
 export async function cacheSpeciesImage(speciesId: string, imageUrl: string) {
@@ -249,8 +241,7 @@ export async function addLivestock(formData: FormData) {
     added_on: String(formData.get("added_on") || new Date().toISOString().slice(0, 10)),
   })
   if (error) throw error
-  revalidatePath("/")
-  revalidatePath("/livestock")
+  revalidateAppPaths("/", "/livestock")
 }
 
 export async function updateLivestock(formData: FormData) {
@@ -279,16 +270,14 @@ export async function updateLivestock(formData: FormData) {
   }
   const { error } = await supabase.from("livestock").update(payload).eq("id", String(formData.get("id")))
   if (error) throw error
-  revalidatePath("/")
-  revalidatePath("/livestock")
+  revalidateAppPaths("/", "/livestock")
 }
 
 export async function removeLivestock(formData: FormData) {
   const { supabase } = await requireUser()
   const { error } = await supabase.from("livestock").delete().eq("id", String(formData.get("id")))
   if (error) throw error
-  revalidatePath("/")
-  revalidatePath("/livestock")
+  revalidateAppPaths("/", "/livestock")
 }
 
 export async function addCustomSpecies(formData: FormData) {
@@ -341,7 +330,7 @@ export async function addCustomSpecies(formData: FormData) {
     notes: String(formData.get("notes") || "") || null,
   })
   if (error) throw error
-  revalidatePath("/livestock")
+  revalidateAppPaths("/livestock")
 }
 
 export async function logDose(formData: FormData) {
@@ -356,8 +345,7 @@ export async function logDose(formData: FormData) {
     dosed_at: String(formData.get("dosed_at") || new Date().toISOString()),
   })
   if (error) throw error
-  revalidatePath("/")
-  revalidatePath("/dosing")
+  revalidateAppPaths("/dosing")
 }
 
 export async function upsertEquipment(formData: FormData) {
@@ -380,8 +368,7 @@ export async function upsertEquipment(formData: FormData) {
     const { error } = await supabase.from("equipment").insert(payload)
     if (error) throw error
   }
-  revalidatePath("/")
-  revalidatePath("/equipment")
+  revalidateAppPaths("/", "/equipment")
 }
 
 export async function serviceEquipment(formData: FormData) {
@@ -391,14 +378,12 @@ export async function serviceEquipment(formData: FormData) {
     .update({ last_serviced_at: new Date().toISOString().slice(0, 10) })
     .eq("id", String(formData.get("id")))
   if (error) throw error
-  revalidatePath("/")
-  revalidatePath("/equipment")
+  revalidateAppPaths("/", "/equipment")
 }
 
 export async function deleteEquipment(formData: FormData) {
   const { supabase } = await requireUser()
   const { error } = await supabase.from("equipment").delete().eq("id", String(formData.get("id")))
   if (error) throw error
-  revalidatePath("/")
-  revalidatePath("/equipment")
+  revalidateAppPaths("/", "/equipment")
 }

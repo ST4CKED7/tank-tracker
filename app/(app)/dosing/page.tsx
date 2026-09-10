@@ -6,7 +6,14 @@ import { getDashboardData } from "@/lib/queries"
 import { isFreshwater } from "@/lib/parameters"
 
 export default async function DosingPage() {
-  const data = await getDashboardData()
+  const data = await getDashboardData({
+    livestock: false,
+    tests: false,
+    waterChanges: false,
+    doses: 100,
+    equipment: false,
+    catalog: false,
+  })
   if (!data.tank) return <TankForm tank={null} />
   const fw = isFreshwater(data.tank.water_type)
   return (

@@ -1,7 +1,7 @@
 "use client"
 
 import { deleteTank } from "@/lib/actions"
-import { Button } from "@/components/ui/button"
+import { SubmitButton } from "@/components/submit-button"
 
 export function DeleteTankButton({ tankId, tankName }: { tankId: string; tankName: string }) {
   return (
@@ -14,9 +14,14 @@ export function DeleteTankButton({ tankId, tankName }: { tankId: string; tankNam
       }}
     >
       <input type="hidden" name="tank_id" value={tankId} />
-      <Button type="submit" size="sm" variant="ghost" className="text-destructive hover:text-destructive">
+      <SubmitButton
+        size="sm"
+        variant="ghost"
+        className="text-destructive hover:text-destructive"
+        pendingLabel="Deleting…"
+      >
         Delete
-      </Button>
+      </SubmitButton>
     </form>
   )
 }

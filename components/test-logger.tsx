@@ -5,6 +5,7 @@ import { logTest } from "@/lib/actions"
 import { API_COLOR_VALUES, parameterMeta, type ParameterKey, type WaterType } from "@/lib/parameters"
 import { KIT_DISCLAIMER, kitsFor, TEST_GUIDES, type KitId, type TestGuide } from "@/lib/kits"
 import { Button } from "@/components/ui/button"
+import { SubmitButton } from "@/components/submit-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -244,7 +245,9 @@ function LogForm({
         <Label htmlFor="notes">Notes</Label>
         <Textarea id="notes" name="notes" placeholder="Optional" />
       </div>
-      <Button type="submit">Save reading</Button>
+      <SubmitButton className="min-h-11" pendingLabel="Saving…">
+        Save reading
+      </SubmitButton>
     </form>
   )
 }
@@ -293,7 +296,9 @@ function OtherParams({ tankId, waterType }: { tankId: string; waterType: WaterTy
                       ? "Most reefs do best around 24–27°C."
                       : "Most reefs do best around 76–80°F."}
             </p>
-            <Button type="submit">Save {meta.label}</Button>
+            <SubmitButton className="min-h-11" pendingLabel="Saving…">
+              Save {meta.label}
+            </SubmitButton>
           </form>
         )
       })}

@@ -4,15 +4,16 @@ import { InstallAppCard } from "@/components/install-app-card"
 import { PageHero } from "@/components/page-hero"
 import { TankForm } from "@/components/tank-form"
 import { UnitPrefsForm } from "@/components/unit-prefs-form"
-import { Button } from "@/components/ui/button"
+import { SubmitButton } from "@/components/submit-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getDashboardData } from "@/lib/queries"
+import { getActiveTankContext } from "@/lib/queries"
 import { formatVolume, unitPrefsFromTank } from "@/lib/units"
 import { cn } from "@/lib/utils"
 
 export default async function SettingsPage() {
-  const data = await getDashboardData()
-  const prefs = unitPrefsFromTank(data.tank)
+  const { tanks, tank } = await getActiveTankContext()
+  const prefs = unitPrefsFromTank(tank)
+  const data = { tanks, tank }
 
   return (
     <div className="space-y-6">
@@ -61,9 +62,9 @@ export default async function SettingsPage() {
                     {!active ? (
                       <form action={setActiveTank}>
                         <input type="hidden" name="tank_id" value={tank.id} />
-                        <Button type="submit" size="sm" variant="secondary">
+                        <SubmitButton size="sm" variant="secondary" pendingLabel="Switching…">
                           Switch to this tank
-                        </Button>
+                        </SubmitButton>
                       </form>
                     ) : null}
                     <DeleteTankButton tankId={tank.id} tankName={tank.name} />

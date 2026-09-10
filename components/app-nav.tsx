@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { signOut } from "@/lib/actions"
 import { Button } from "@/components/ui/button"
+import { SubmitButton } from "@/components/submit-button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { TankSwitcher } from "@/components/tank-switcher"
 import type { Tank } from "@/lib/bioload"
@@ -73,7 +74,7 @@ export function AppNav({
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-primary/15 bg-background/80 shadow-sm shadow-primary/5 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-40 border-b border-primary/15 bg-background/95 shadow-sm shadow-primary/5 backdrop-blur-md md:bg-background/80 md:backdrop-blur-xl pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
           <Link href="/" className="flex shrink-0 items-center gap-2 font-semibold tracking-tight">
             <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/30 sm:size-8">
@@ -110,9 +111,9 @@ export function AppNav({
             ) : null}
             <ThemeToggle />
             <form action={signOut}>
-              <Button type="submit" variant="ghost" size="sm">
+              <SubmitButton variant="ghost" size="sm" pendingLabel="…">
                 Sign out
-              </Button>
+              </SubmitButton>
             </form>
           </nav>
 
@@ -169,9 +170,9 @@ export function AppNav({
                 <div className="flex items-center gap-1">
                   <ThemeToggle />
                   <form action={signOut}>
-                    <Button type="submit" variant="ghost" className="min-h-11">
+                    <SubmitButton variant="ghost" className="min-h-11" pendingLabel="…">
                       Sign out
-                    </Button>
+                    </SubmitButton>
                   </form>
                 </div>
               </div>
@@ -181,7 +182,7 @@ export function AppNav({
       </header>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/15 bg-background/90 backdrop-blur-xl md:hidden pb-[env(safe-area-inset-bottom)]"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/15 bg-background/95 backdrop-blur-md md:hidden pb-[env(safe-area-inset-bottom)]"
         aria-label="Primary"
       >
         <div className="mx-auto grid max-w-6xl grid-cols-4">

@@ -6,7 +6,14 @@ import { TankForm } from "@/components/tank-form"
 import { isFreshwater } from "@/lib/parameters"
 
 export default async function TestsPage() {
-  const data = await getDashboardData()
+  const data = await getDashboardData({
+    livestock: true,
+    tests: 60,
+    waterChanges: 30,
+    doses: false,
+    equipment: false,
+    catalog: false,
+  })
   if (!data.tank) return <TankForm tank={null} />
   const fw = isFreshwater(data.tank.water_type)
   return (

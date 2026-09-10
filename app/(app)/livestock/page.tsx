@@ -11,7 +11,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { unitPrefsFromTank } from "@/lib/units"
 
 export default async function LivestockPage() {
-  const data = await getDashboardData()
+  const data = await getDashboardData({
+    livestock: true,
+    tests: 80,
+    waterChanges: 40,
+    doses: false,
+    equipment: false,
+    catalog: true,
+  })
   if (!data.tank) return <TankForm tank={null} />
   const ranges = intersectRanges(data.livestock)
   const prefs = unitPrefsFromTank(data.tank)

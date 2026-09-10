@@ -2,7 +2,7 @@
 
 import { upsertTank } from "@/lib/actions"
 import type { Tank } from "@/lib/bioload"
-import { Button } from "@/components/ui/button"
+import { SubmitButton } from "@/components/submit-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -223,7 +223,7 @@ export function TankForm({ tank, mode = "auto" }: { tank: Tank | null; mode?: "a
               ))}
             </select>
           </div>
-          <Button type="submit">{isCreate ? "Create tank" : "Save tank"}</Button>
+          <SubmitButton className="min-h-11 sm:min-h-8">{isCreate ? "Create tank" : "Save tank"}</SubmitButton>
         </form>
       </CardContent>
     </Card>

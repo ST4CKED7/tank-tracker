@@ -2,7 +2,7 @@
 
 import { deleteEquipment, serviceEquipment, upsertEquipment } from "@/lib/actions"
 import type { Tables } from "@/lib/database.types"
-import { Button } from "@/components/ui/button"
+import { SubmitButton } from "@/components/submit-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -44,7 +44,7 @@ export function EquipmentPanel({ tankId, equipment }: { tankId: string; equipmen
               <Label htmlFor="last_serviced_at">Last serviced</Label>
               <Input id="last_serviced_at" name="last_serviced_at" type="date" />
             </div>
-            <Button type="submit">Save</Button>
+            <SubmitButton className="min-h-11 w-full sm:w-auto">Save</SubmitButton>
           </form>
         </CardContent>
       </Card>
@@ -68,11 +68,15 @@ export function EquipmentPanel({ tankId, equipment }: { tankId: string; equipmen
                 <div className="flex gap-2">
                   <form action={serviceEquipment}>
                     <input type="hidden" name="id" value={item.id} />
-                    <Button type="submit" size="sm">Serviced today</Button>
+                    <SubmitButton size="sm" pendingLabel="Saving…">
+                      Serviced today
+                    </SubmitButton>
                   </form>
                   <form action={deleteEquipment}>
                     <input type="hidden" name="id" value={item.id} />
-                    <Button type="submit" size="sm" variant="ghost">Remove</Button>
+                    <SubmitButton size="sm" variant="ghost" pendingLabel="Removing…">
+                      Remove
+                    </SubmitButton>
                   </form>
                 </div>
               </div>

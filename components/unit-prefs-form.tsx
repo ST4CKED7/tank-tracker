@@ -2,7 +2,7 @@
 
 import { updateUnitPrefs } from "@/lib/actions"
 import type { Tank } from "@/lib/bioload"
-import { Button } from "@/components/ui/button"
+import { SubmitButton } from "@/components/submit-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { unitPrefsFromTank, type LengthUnit, type TempUnit, type UnitPrefs, type VolumeUnit } from "@/lib/units"
@@ -94,9 +94,7 @@ export function UnitPrefsForm({ tank }: { tank: Tank }) {
             />
           </div>
           <div className="md:col-span-3">
-            <Button type="submit" className="min-h-11 w-full sm:w-auto">
-              Save unit preferences
-            </Button>
+            <SubmitButton className="min-h-11 w-full sm:w-auto">Save unit preferences</SubmitButton>
           </div>
         </form>
       </CardContent>

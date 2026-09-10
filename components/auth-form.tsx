@@ -1,19 +1,21 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export function AuthForm() {
+  const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [message, setMessage] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
-  async function handleAuth() {
+  async function handleAuth(event: React.FormEvent) {
+    event.preventDefault()
     setPending(true)
     setMessage(null)
     try {
@@ -23,9 +25,9 @@ export function AuthForm() {
         setMessage(error.message)
         return
       }
-      // Ensure session cookies are written before navigation.
       await supabase.auth.getSession()
-      window.location.assign("/")
+      router.replace("/")
+      router.refresh()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Something went wrong. Try again.")
     } finally {
@@ -42,14 +44,7 @@ export function AuthForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            void handleAuth()
-          }}
-        >
+        <form className="space-y-4" onSubmit={(event) => void handleAuth(event)}>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -76,14 +71,13 @@ export function AuthForm() {
             />
           </div>
           {message ? <p className="text-sm text-destructive">{message}</p> : null}
-          <Button
-            type="button"
-            className="w-full"
+          <button
+            type="submit"
             disabled={pending}
-            onClick={() => void handleAuth()}
+            className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
           >
-            {pending ? "Working…" : "Sign in"}
-          </Button>
+            {pending ? "Signing in…" : "Sign in"}
+          </button>
         </form>
       </CardContent>
     </Card>

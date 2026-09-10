@@ -4,7 +4,14 @@ import { TankForm } from "@/components/tank-form"
 import { getDashboardData } from "@/lib/queries"
 
 export default async function EquipmentPage() {
-  const data = await getDashboardData()
+  const data = await getDashboardData({
+    livestock: false,
+    tests: false,
+    waterChanges: false,
+    doses: false,
+    equipment: true,
+    catalog: false,
+  })
   if (!data.tank) return <TankForm tank={null} />
   return (
     <div className="space-y-4">

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { logDose } from "@/lib/actions"
 import type { Tables } from "@/lib/database.types"
-import { Button } from "@/components/ui/button"
+import { SubmitButton } from "@/components/submit-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -112,9 +112,9 @@ export function DosingPanel({
                   )}
                 </select>
               </div>
-              <Button type="submit" className="min-h-11 w-full sm:w-auto">
+              <SubmitButton className="min-h-11 w-full sm:w-auto" pendingLabel="Saving…">
                 Save dose
-              </Button>
+              </SubmitButton>
             </form>
           </CardContent>
         </Card>

@@ -11,6 +11,7 @@ import {
 import { suggestAdditions } from "@/lib/compatibility"
 import type { ParameterKey } from "@/lib/parameters"
 import { Button } from "@/components/ui/button"
+import { SubmitButton } from "@/components/submit-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -120,9 +121,9 @@ export function LivestockManager({
                   </div>
                   <form action={removeLivestock} className="self-end sm:self-start">
                     <input type="hidden" name="id" value={item.id} />
-                    <Button type="submit" variant="ghost" size="sm" className="min-h-11 sm:min-h-8">
+                    <SubmitButton variant="ghost" size="sm" className="min-h-11 sm:min-h-8" pendingLabel="…">
                       Remove
-                    </Button>
+                    </SubmitButton>
                   </form>
                 </div>
 
@@ -179,7 +180,9 @@ export function LivestockManager({
                         className="w-20"
                       />
                     </div>
-                    <Button type="submit" size="sm" variant="secondary">Update</Button>
+                    <SubmitButton size="sm" variant="secondary" pendingLabel="Updating…">
+                      Update
+                    </SubmitButton>
                   </form>
                 ) : null}
               </div>
@@ -244,7 +247,9 @@ export function LivestockManager({
                       }
                     />
                   ) : null}
-                  <Button type="submit" size="sm">Add</Button>
+                  <SubmitButton size="sm" pendingLabel="Adding…">
+                    Add
+                  </SubmitButton>
                 </div>
               </div>
             </form>
@@ -357,7 +362,9 @@ export function LivestockManager({
                       </select>
                     </div>
                   ) : null}
-                  <Button type="submit" size="sm">Add</Button>
+                  <SubmitButton size="sm" pendingLabel="Adding…">
+                    Add
+                  </SubmitButton>
                 </div>
               </form>
             ))}
@@ -414,7 +421,9 @@ export function LivestockManager({
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea id="notes" name="notes" />
               </div>
-              <Button type="submit">Save species</Button>
+              <SubmitButton className="min-h-11" pendingLabel="Saving…">
+                Save species
+              </SubmitButton>
             </form>
           </details>
         </CardContent>

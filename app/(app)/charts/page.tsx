@@ -1,4 +1,4 @@
-import { ParameterCharts } from "@/components/parameter-charts"
+import { ParameterChartsLazy } from "@/components/parameter-charts-lazy"
 import { CsvExport } from "@/components/latest-readings"
 import { PageHero } from "@/components/page-hero"
 import { TankForm } from "@/components/tank-form"
@@ -6,7 +6,14 @@ import { intersectRanges } from "@/lib/compatibility"
 import { getDashboardData } from "@/lib/queries"
 
 export default async function ChartsPage() {
-  const data = await getDashboardData()
+  const data = await getDashboardData({
+    livestock: true,
+    tests: 400,
+    waterChanges: 100,
+    doses: false,
+    equipment: false,
+    catalog: false,
+  })
   if (!data.tank) return <TankForm tank={null} />
   return (
     <div className="space-y-4">
@@ -16,7 +23,11 @@ export default async function ChartsPage() {
         description="Target bands come from livestock overlap. Dashed orange lines are water changes."
         actions={<CsvExport tests={data.tests} />}
       />
-      <ParameterCharts tests={data.tests} waterChanges={data.waterChanges} ranges={intersectRanges(data.livestock)} />
+      <ParameterChartsLazy
+        tests={data.tests}
+        waterChanges={data.waterChanges}
+        ranges={intersectRanges(data.livestock)}
+      />
     </div>
   )
 }

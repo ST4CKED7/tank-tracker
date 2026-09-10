@@ -22,7 +22,14 @@ import { formatVolume, unitPrefsFromTank } from "@/lib/units"
 import { displayTankType } from "@/lib/tank-profiles"
 
 export default async function HomePage() {
-  const data = await getDashboardData()
+  const data = await getDashboardData({
+    livestock: true,
+    tests: 80,
+    waterChanges: 40,
+    doses: false,
+    equipment: true,
+    catalog: true,
+  })
   if (!data.tank) {
     return (
       <div className="space-y-4">

@@ -1,10 +1,17 @@
-import { CycleChart } from "@/components/cycle-chart"
+import { CycleChartLazy } from "@/components/cycle-chart-lazy"
 import { PageHero } from "@/components/page-hero"
 import { TankForm } from "@/components/tank-form"
 import { getDashboardData } from "@/lib/queries"
 
 export default async function CyclePage() {
-  const data = await getDashboardData()
+  const data = await getDashboardData({
+    livestock: false,
+    tests: 200,
+    waterChanges: false,
+    doses: false,
+    equipment: false,
+    catalog: false,
+  })
   if (!data.tank) return <TankForm tank={null} />
   const latestA = data.latest.ammonia
   const latestNi = data.latest.nitrite
@@ -17,10 +24,14 @@ export default async function CyclePage() {
         title="Nitrogen cycle"
         description="Watch ammonia and nitrite fall to 0 while nitrate appears. A cycled tank stays at 0 / 0 with some nitrate."
       />
-      <p className={`rounded-2xl border px-4 py-3 text-sm ${cycled ? "border-primary/30 bg-primary/10" : "border-amber-500/30 bg-amber-500/10"}`}>
-        {cycled ? "Looks cycled from the latest readings." : "Not cycled yet, or you still need ammonia and nitrite logs at 0."}
+      <p
+        className={`rounded-2xl border px-4 py-3 text-sm ${cycled ? "border-primary/30 bg-primary/10" : "border-amber-500/30 bg-amber-500/10"}`}
+      >
+        {cycled
+          ? "Looks cycled from the latest readings."
+          : "Not cycled yet, or you still need ammonia and nitrite logs at 0."}
       </p>
-      <CycleChart tests={data.tests} />
+      <CycleChartLazy tests={data.tests} />
     </div>
   )
 }

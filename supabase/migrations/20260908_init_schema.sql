@@ -1,0 +1,2 @@
+-- Applied remotely via Supabase MCP as init_schema.
+-- See lib/database.types.ts for generated types.

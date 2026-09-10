@@ -1,0 +1,8 @@
+update public.species_catalog
+SET image_url = CASE id
+  WHEN 'b5d01d95-bc29-4a3a-b6cc-b24f328b53d1' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/490632811/medium.jpg'
+  WHEN '971670c7-6eaf-44df-a472-afe9bb9a0ec1' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/71733761/medium.jpg'
+  WHEN '18505462-b756-45f7-804d-41ad77c55ba9' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/67773766/medium.jpeg'
+  WHEN '5ce4c74b-3fb7-4d2e-9f93-ea33d8054649' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/11066492/medium.jpg'
+END
+WHERE id IN ('b5d01d95-bc29-4a3a-b6cc-b24f328b53d1', '971670c7-6eaf-44df-a472-afe9bb9a0ec1', '18505462-b756-45f7-804d-41ad77c55ba9', '5ce4c74b-3fb7-4d2e-9f93-ea33d8054649');

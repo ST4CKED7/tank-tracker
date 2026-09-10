@@ -1,0 +1,161 @@
+update public.species_catalog
+SET image_url = CASE id
+  WHEN '5d2a6274-34ae-401a-b269-550fb37464bc' THEN 'https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8f/Apistogramma_agassizii_in_aquarium.jpg/330px-Apistogramma_agassizii_in_aquarium.jpg'
+  WHEN 'ad980646-9f1f-41f9-a417-f6d7fcfc8115' THEN 'https://upload.wikimedia.org/wikipedia/commons/e/e8/Alternanthera_reineckii.jpg'
+  WHEN '852e657f-7bbd-4584-ab39-9271c272d38a' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Amano_Garnele_%2885281493%29.jpeg/330px-Amano_Garnele_%2885281493%29.jpeg'
+  WHEN 'c267e2e3-eed9-49d3-ba76-86249a2c65cf' THEN 'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d4/Limnobium_laevigatum.JPG/330px-Limnobium_laevigatum.JPG'
+  WHEN '118abc6c-1f7a-48ca-811d-70263acdb0c9' THEN 'https://upload.wikimedia.org/wikipedia/commons/d/d0/Echinodorus_bleheri.jpg'
+  WHEN 'b9207f0c-80a2-4b9f-8724-808ba3ecbc3f' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Limnophila_sessiliflora.jpg/330px-Limnophila_sessiliflora.jpg'
+  WHEN '04cba4a4-65d0-4f70-859d-57bcb9363704' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Anubias_barteri_var_glabra.jpg/330px-Anubias_barteri_var_glabra.jpg'
+  WHEN '506a9d3f-869d-439f-9d64-59cb36dae99f' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Anubias_barteri_var_glabra.jpg/330px-Anubias_barteri_var_glabra.jpg'
+  WHEN '285fe979-02a4-4ea9-92ad-a7bb4d987f49' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Aponogeton_Ulvaceus.png/330px-Aponogeton_Ulvaceus.png'
+  WHEN 'dba79f2c-7a39-4b01-baac-eb628743821b' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/Clea_helena.png/330px-Clea_helena.png'
+  WHEN '6e814fba-4c09-442c-938f-43fa9af0548b' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Bacopa_caroliniana_BotGardBln07122011D.JPG/330px-Bacopa_caroliniana_BotGardBln07122011D.JPG'
+  WHEN '9b25221d-8e11-458a-835c-61e50235e81a' THEN 'https://static.inaturalist.org/photos/254213939/medium.jpg'
+  WHEN 'f64dda95-7fb4-4357-85cb-003310c86e3f' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/304542732/medium.jpg'
+  WHEN 'c723ea94-66ad-4a3d-ad45-b91f608deb23' THEN 'https://static.inaturalist.org/photos/564865375/medium.jpg'
+  WHEN '97eb4937-f9e9-4c83-9220-b0e7532f4790' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/105329788/medium.jpg'
+  WHEN 'ced1e955-adb7-4bdf-afd0-d8533486f64f' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/311139004/medium.jpg'
+  WHEN 'd61af6af-b2a6-47bb-b130-82a7b97b4e77' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/76418941/medium.jpg'
+  WHEN 'cd0efcb5-49c7-4ff5-b7c5-d3ede1b7ff8f' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/11070537/medium.jpg'
+  WHEN 'f85ad9da-718b-458e-8484-bd25aed5310d' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/80872138/medium.jpg'
+  WHEN 'a2db06aa-f107-4a67-8c9a-f3be04024959' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/11371936/medium.jpg'
+  WHEN '35bb0123-6ce9-49ed-a6f3-83df447d8cd0' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/445545216/medium.jpeg'
+  WHEN '65dac0f1-e852-4d2a-8202-54c0dca756bd' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/347207428/medium.jpeg'
+  WHEN 'caf34b1a-31cc-4393-af45-554381717b9c' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/95481034/medium.jpg'
+  WHEN 'c1edbbd5-efd1-4f06-a40a-4347613811de' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/287953751/medium.jpg'
+  WHEN 'bf99170f-5fc9-4445-948f-0e88e029cf5f' THEN 'https://static.inaturalist.org/photos/58257335/medium.jpeg'
+END
+WHERE id IN ('5d2a6274-34ae-401a-b269-550fb37464bc', 'ad980646-9f1f-41f9-a417-f6d7fcfc8115', '852e657f-7bbd-4584-ab39-9271c272d38a', 'c267e2e3-eed9-49d3-ba76-86249a2c65cf', '118abc6c-1f7a-48ca-811d-70263acdb0c9', 'b9207f0c-80a2-4b9f-8724-808ba3ecbc3f', '04cba4a4-65d0-4f70-859d-57bcb9363704', '506a9d3f-869d-439f-9d64-59cb36dae99f', '285fe979-02a4-4ea9-92ad-a7bb4d987f49', 'dba79f2c-7a39-4b01-baac-eb628743821b', '6e814fba-4c09-442c-938f-43fa9af0548b', '9b25221d-8e11-458a-835c-61e50235e81a', 'f64dda95-7fb4-4357-85cb-003310c86e3f', 'c723ea94-66ad-4a3d-ad45-b91f608deb23', '97eb4937-f9e9-4c83-9220-b0e7532f4790', 'ced1e955-adb7-4bdf-afd0-d8533486f64f', 'd61af6af-b2a6-47bb-b130-82a7b97b4e77', 'cd0efcb5-49c7-4ff5-b7c5-d3ede1b7ff8f', 'f85ad9da-718b-458e-8484-bd25aed5310d', 'a2db06aa-f107-4a67-8c9a-f3be04024959', '35bb0123-6ce9-49ed-a6f3-83df447d8cd0', '65dac0f1-e852-4d2a-8202-54c0dca756bd', 'caf34b1a-31cc-4393-af45-554381717b9c', 'c1edbbd5-efd1-4f06-a40a-4347613811de', 'bf99170f-5fc9-4445-948f-0e88e029cf5f');
+
+update public.species_catalog
+SET image_url = CASE id
+  WHEN 'c76e4bd6-c511-411d-8eae-68bc05c8c38f' THEN 'https://static.inaturalist.org/photos/276932141/medium.jpg'
+  WHEN 'ce99e27c-71cc-48ce-8be2-2590e54c86cd' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/354211778/medium.jpeg'
+  WHEN 'c3efb0ef-dbb2-4564-9ced-1e75bb7652ac' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/678036400/medium.jpg'
+  WHEN 'd4edc704-9edb-4e3f-9911-5263d6d88c81' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/11065658/medium.jpg'
+  WHEN 'af953915-3f63-4032-84d6-c31c7d37ba84' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/42730173/medium.jpeg'
+  WHEN '2896580e-67d2-4238-b7be-7316ed3a7487' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/17503267/medium.jpg'
+  WHEN '1613c0eb-7e59-4139-bf7a-26e8d9fc1cd4' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/78707093/medium.jpg'
+  WHEN '4fce3c21-4594-4d80-86b3-7acd29940561' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/15090592/medium.jpg'
+  WHEN '64832bbc-2870-4047-9df3-732d81541273' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/94477007/medium.jpg'
+  WHEN '489cfd20-bd58-48ba-8859-7cb9e20cabf0' THEN 'https://static.inaturalist.org/photos/362551277/medium.jpg'
+  WHEN 'ea6da92c-bd94-4e4a-9cdd-289236836a71' THEN 'https://static.inaturalist.org/photos/32166242/medium.jpeg'
+  WHEN '65eef30e-5bcd-416c-acfc-fb73c3d0b667' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/57569315/medium.jpg'
+  WHEN '602c168c-b4d7-457c-a1eb-9910737f504d' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/81863630/medium.jpg'
+  WHEN 'b04475ae-af31-41f7-90e2-d3a5c4e11112' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/80890700/medium.jpg'
+  WHEN '9c2b0d2f-e718-49cf-9d3c-b9101f720ab8' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/461292042/medium.jpeg'
+  WHEN '954b9274-5fda-45dc-be87-6a432c97e2fb' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/158335213/medium.jpg'
+  WHEN '206abbe7-d5ba-49bc-939f-7aad54efd9bc' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/180902732/medium.jpg'
+  WHEN '68a4b831-87d3-4e04-904e-0a22d94672ea' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/31270331/medium.jpeg'
+  WHEN 'c06c2c3d-333b-4833-a9fb-9e063a1d5351' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/81839339/medium.jpg'
+  WHEN '8d521c80-8315-4c5f-bad6-a69700b19ed6' THEN 'https://static.inaturalist.org/photos/489422668/medium.jpg'
+  WHEN 'ea48886b-9254-47eb-9c50-1766614b81da' THEN 'https://static.inaturalist.org/photos/182306134/medium.jpeg'
+  WHEN 'c2f655c3-b8f2-45a4-8ed2-222d33ee835b' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/118550776/medium.jpg'
+  WHEN 'c9c3a830-2390-459a-86f3-7a536c749b51' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/707661950/medium.jpg'
+  WHEN 'a310ee1b-89a0-4cd4-bf0d-a97fd6959489' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Hygrophila_polysperma.JPG/330px-Hygrophila_polysperma.JPG'
+  WHEN 'bb551f6b-9bb5-4147-bb07-c4acfade22ed' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Sagittaria_subulata_kz01.jpg/330px-Sagittaria_subulata_kz01.jpg'
+END
+WHERE id IN ('c76e4bd6-c511-411d-8eae-68bc05c8c38f', 'ce99e27c-71cc-48ce-8be2-2590e54c86cd', 'c3efb0ef-dbb2-4564-9ced-1e75bb7652ac', 'd4edc704-9edb-4e3f-9911-5263d6d88c81', 'af953915-3f63-4032-84d6-c31c7d37ba84', '2896580e-67d2-4238-b7be-7316ed3a7487', '1613c0eb-7e59-4139-bf7a-26e8d9fc1cd4', '4fce3c21-4594-4d80-86b3-7acd29940561', '64832bbc-2870-4047-9df3-732d81541273', '489cfd20-bd58-48ba-8859-7cb9e20cabf0', 'ea6da92c-bd94-4e4a-9cdd-289236836a71', '65eef30e-5bcd-416c-acfc-fb73c3d0b667', '602c168c-b4d7-457c-a1eb-9910737f504d', 'b04475ae-af31-41f7-90e2-d3a5c4e11112', '9c2b0d2f-e718-49cf-9d3c-b9101f720ab8', '954b9274-5fda-45dc-be87-6a432c97e2fb', '206abbe7-d5ba-49bc-939f-7aad54efd9bc', '68a4b831-87d3-4e04-904e-0a22d94672ea', 'c06c2c3d-333b-4833-a9fb-9e063a1d5351', '8d521c80-8315-4c5f-bad6-a69700b19ed6', 'ea48886b-9254-47eb-9c50-1766614b81da', 'c2f655c3-b8f2-45a4-8ed2-222d33ee835b', 'c9c3a830-2390-459a-86f3-7a536c749b51', 'a310ee1b-89a0-4cd4-bf0d-a97fd6959489', 'bb551f6b-9bb5-4147-bb07-c4acfade22ed');
+
+update public.species_catalog
+SET image_url = CASE id
+  WHEN '898d5b9e-65ed-4813-b76c-46beb7cc7195' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/Aequidens_pulcher.jpg/330px-Aequidens_pulcher.jpg'
+  WHEN 'd77d454a-2b14-47f6-b250-954ee3e576b5' THEN 'https://thumb.wikimedia.org/wikipedia/commons/thumb/8/86/Hyphessobrycon_amandae_A.jpg/330px-Hyphessobrycon_amandae_A.jpg'
+  WHEN '6a29eafe-fb55-49d8-9bf8-8d0ad78d2099' THEN 'https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/Poecilia_wingei_Campoma_male_021en_20130303.jpg/330px-Poecilia_wingei_Campoma_male_021en_20130303.jpg'
+  WHEN 'db5d1da3-aa3f-433f-84bd-701bdcf39685' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Gold_fish1.jpg/330px-Gold_fish1.jpg'
+  WHEN '32965452-588a-495a-a295-576622224d1f' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/138657562/medium.jpeg'
+  WHEN 'aa844792-af5a-4919-a108-ab1a570274de' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/2074629/medium.jpg'
+  WHEN '8db7ab35-43ea-4e3b-91da-c52855799527' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/80272432/medium.png'
+  WHEN '4de18372-53f1-4e02-9b06-b6d9107b8920' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/67141787/medium.jpg'
+  WHEN '74336b02-7fe2-4197-be19-c466c51ff8f9' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/58329283/medium.jpg'
+  WHEN 'baf54e2e-2127-42dd-b781-72e17c1635b5' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/347925554/medium.jpg'
+  WHEN 'e1f1307a-c749-4036-9406-b0b47ccdf04c' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/60778702/medium.jpg'
+  WHEN '4c5b4550-8181-4366-bdc6-843b954c48e8' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/634774007/medium.jpg'
+  WHEN 'fe6099bc-c5de-480c-994b-fb8abd7f3f0f' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/17119983/medium.jpeg'
+  WHEN 'fd292831-3d95-4956-aa07-86a03a41b478' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/358133948/medium.jpg'
+  WHEN 'f8873d28-675d-4020-91f5-dcdcf99dc6de' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/131727414/medium.jpeg'
+  WHEN 'ead8f66e-80cd-4f6c-8fdc-004bf225741a' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/96911304/medium.jpg'
+  WHEN '483ccf46-fd6f-4f43-81bb-55a00eda46aa' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/193786804/medium.jpeg'
+  WHEN '0372a1a4-ae69-45b9-b380-ed44eb631853' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/189389672/medium.jpeg'
+  WHEN 'c067680c-bc32-4ad7-a9c8-455135df1692' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/112527368/medium.jpeg'
+  WHEN 'dd45d94c-ccf7-479f-9e27-a0cc4e356909' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/112527368/medium.jpeg'
+  WHEN '1269f8b2-4d85-46de-9fe2-9a64a09e226d' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/123781329/medium.jpeg'
+  WHEN '3f9e9a82-50fb-4394-a015-3c64206b43da' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/257136194/medium.jpg'
+  WHEN '249cf22a-ad95-4201-a48c-8c72c27941d2' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/551267455/medium.jpg'
+  WHEN '60f641af-c2e9-4fb8-93e5-12cfe3bc62bc' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/71715847/medium.jpg'
+  WHEN 'faf49746-6d6e-4474-a7fb-7ed46e3d4265' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/2085783/medium.jpg'
+END
+WHERE id IN ('898d5b9e-65ed-4813-b76c-46beb7cc7195', 'd77d454a-2b14-47f6-b250-954ee3e576b5', '6a29eafe-fb55-49d8-9bf8-8d0ad78d2099', 'db5d1da3-aa3f-433f-84bd-701bdcf39685', '32965452-588a-495a-a295-576622224d1f', 'aa844792-af5a-4919-a108-ab1a570274de', '8db7ab35-43ea-4e3b-91da-c52855799527', '4de18372-53f1-4e02-9b06-b6d9107b8920', '74336b02-7fe2-4197-be19-c466c51ff8f9', 'baf54e2e-2127-42dd-b781-72e17c1635b5', 'e1f1307a-c749-4036-9406-b0b47ccdf04c', '4c5b4550-8181-4366-bdc6-843b954c48e8', 'fe6099bc-c5de-480c-994b-fb8abd7f3f0f', 'fd292831-3d95-4956-aa07-86a03a41b478', 'f8873d28-675d-4020-91f5-dcdcf99dc6de', 'ead8f66e-80cd-4f6c-8fdc-004bf225741a', '483ccf46-fd6f-4f43-81bb-55a00eda46aa', '0372a1a4-ae69-45b9-b380-ed44eb631853', 'c067680c-bc32-4ad7-a9c8-455135df1692', 'dd45d94c-ccf7-479f-9e27-a0cc4e356909', '1269f8b2-4d85-46de-9fe2-9a64a09e226d', '3f9e9a82-50fb-4394-a015-3c64206b43da', '249cf22a-ad95-4201-a48c-8c72c27941d2', '60f641af-c2e9-4fb8-93e5-12cfe3bc62bc', 'faf49746-6d6e-4474-a7fb-7ed46e3d4265');
+
+update public.species_catalog
+SET image_url = CASE id
+  WHEN '06cb5d7c-2c85-4590-977c-09c5324da90c' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/34703621/medium.jpeg'
+  WHEN 'd1d4c048-0d9c-4fd6-9a53-55396667fe19' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/138696787/medium.jpg'
+  WHEN '0a052bbc-a888-4983-9c9f-b44ab0a8b4f8' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/84798376/medium.jpg'
+  WHEN 'de17d170-63b9-4860-9455-4c8735b8458c' THEN 'https://static.inaturalist.org/photos/44554452/medium.jpg'
+  WHEN '16e3a7ad-7478-4eea-9b6f-4ee3e2c1c54c' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/58853446/medium.jpeg'
+  WHEN 'f2a6631a-ae46-4cd0-90e5-4c8f85b45761' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/208075679/medium.jpg'
+  WHEN '71bcd2d8-b85b-4481-8c67-2bea794daad5' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/177023609/medium.jpeg'
+  WHEN '341573e4-0fcc-433a-ade9-63695945366e' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/7735113/medium.jpg'
+  WHEN '732c9f0b-85b7-4343-b10c-d6b13dc21b90' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/71484030/medium.jpg'
+  WHEN 'fb5524f6-eeb6-4108-a1ee-e920f6d2d52e' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/24758978/medium.jpg'
+  WHEN '31607fd1-edaf-4b5e-81d2-522d5b0688ef' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/533128/medium.jpg'
+  WHEN 'b1585fe3-97f8-4e3c-9252-a89f89d2d66c' THEN 'https://static.inaturalist.org/photos/14779002/medium.jpg'
+  WHEN '1f6d4050-7f6d-450d-820d-ce28b3c64c8e' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/80666009/medium.jpg'
+  WHEN '4bbb08b7-306c-45bf-b22c-28550f082eaa' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/84187734/medium.jpg'
+  WHEN '26a3ec1e-e990-40e4-9bab-4b0435ca93f6' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/235244478/medium.jpg'
+  WHEN '083f7b03-a8ea-42ef-9831-dad0080ccf16' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/80647353/medium.jpg'
+  WHEN '0fb42ac5-8c70-4513-966c-607502aa1779' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/1472051/medium.png'
+  WHEN '81622946-f48f-4bc9-ba5d-4d36c88b9320' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/56378297/medium.jpeg'
+  WHEN '0336f06a-61a6-4535-805f-e7463421c9bc' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/80223802/medium.jpg'
+  WHEN 'd2f6af2b-1414-4fb1-9ac4-9bd473093c8d' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/17503292/medium.png'
+  WHEN '59c1e264-fca3-4239-a52d-3452f0225125' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/246740667/medium.jpg'
+  WHEN 'ff879bc7-9f33-46c5-9c8d-eb2be2b6bcc9' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/56578924/medium.jpeg'
+  WHEN '902b505f-1094-447b-b94d-4e5f4d4a0e9e' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/379196384/medium.jpeg'
+  WHEN 'bc5ec450-9565-4164-b88a-7441df0e2f7f' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/138797483/medium.jpg'
+  WHEN '5d54d07c-6818-48f7-8cdb-d482793f719b' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/1499611/medium.jpeg'
+END
+WHERE id IN ('06cb5d7c-2c85-4590-977c-09c5324da90c', 'd1d4c048-0d9c-4fd6-9a53-55396667fe19', '0a052bbc-a888-4983-9c9f-b44ab0a8b4f8', 'de17d170-63b9-4860-9455-4c8735b8458c', '16e3a7ad-7478-4eea-9b6f-4ee3e2c1c54c', 'f2a6631a-ae46-4cd0-90e5-4c8f85b45761', '71bcd2d8-b85b-4481-8c67-2bea794daad5', '341573e4-0fcc-433a-ade9-63695945366e', '732c9f0b-85b7-4343-b10c-d6b13dc21b90', 'fb5524f6-eeb6-4108-a1ee-e920f6d2d52e', '31607fd1-edaf-4b5e-81d2-522d5b0688ef', 'b1585fe3-97f8-4e3c-9252-a89f89d2d66c', '1f6d4050-7f6d-450d-820d-ce28b3c64c8e', '4bbb08b7-306c-45bf-b22c-28550f082eaa', '26a3ec1e-e990-40e4-9bab-4b0435ca93f6', '083f7b03-a8ea-42ef-9831-dad0080ccf16', '0fb42ac5-8c70-4513-966c-607502aa1779', '81622946-f48f-4bc9-ba5d-4d36c88b9320', '0336f06a-61a6-4535-805f-e7463421c9bc', 'd2f6af2b-1414-4fb1-9ac4-9bd473093c8d', '59c1e264-fca3-4239-a52d-3452f0225125', 'ff879bc7-9f33-46c5-9c8d-eb2be2b6bcc9', '902b505f-1094-447b-b94d-4e5f4d4a0e9e', 'bc5ec450-9565-4164-b88a-7441df0e2f7f', '5d54d07c-6818-48f7-8cdb-d482793f719b');
+
+update public.species_catalog
+SET image_url = CASE id
+  WHEN '27b0348b-c46d-4b7c-9aaf-88c9dc44ed50' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/29142129/medium.jpeg'
+  WHEN 'de0b57f5-0c7f-4b0e-962b-60a3cbd89549' THEN 'https://static.inaturalist.org/photos/412578852/medium.jpeg'
+  WHEN '11dd3c53-259a-4ef4-8ad7-b164bacb86c1' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/39794398/medium.jpeg'
+  WHEN '6b3d1cbd-f97a-4330-a7da-0177654f11c1' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/326077499/medium.jpeg'
+  WHEN '33ae7498-6e36-4229-8790-ddb55b52b60d' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Akwa19_reedfish.jpg/330px-Akwa19_reedfish.jpg'
+  WHEN '60c8dba5-d222-4243-a546-870cf0ce20d0' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Rotala_rotundifolia.jpg/330px-Rotala_rotundifolia.jpg'
+  WHEN '2d587cf6-0f5b-4347-898e-5a15d0c68f3a' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Hemigrammus_rhodostomus.jpg/330px-Hemigrammus_rhodostomus.jpg'
+  WHEN '669cc49b-79d3-4bd9-b1c5-5b62c1ba00b1' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Salvinia_natans_%28habitus%29_1.jpg/330px-Salvinia_natans_%28habitus%29_1.jpg'
+  WHEN 'd1009ac2-7f77-481d-b2cb-5941a5542f00' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Hyphessobrycon_eques.jpg/330px-Hyphessobrycon_eques.jpg'
+  WHEN '31b58dc3-22c7-49c8-a110-5db8375b0d49' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Crossocheilus_siamensis_by_Ark.jpg/330px-Crossocheilus_siamensis_by_Ark.jpg'
+  WHEN '1e08735a-184e-430c-8072-013d7f90e447' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Epalzeorhynchos_kalopterus.jpg/330px-Epalzeorhynchos_kalopterus.jpg'
+  WHEN 'aab4b653-1a78-4285-b684-9e114f11261c' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Osteoglossum_bicirrhosum.JPG/330px-Osteoglossum_bicirrhosum.JPG'
+  WHEN '1d6b78f2-0f05-40cf-948c-3c081b5118db' THEN 'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/Silver_dollar_-_Metynnis_argenteus.jpg/330px-Silver_dollar_-_Metynnis_argenteus.jpg'
+  WHEN 'e4e449e9-4adb-4778-9b7e-6978fa0497ae' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/6151293/medium.jpeg'
+  WHEN '74ecfeee-a328-41e0-86fe-83d8207b69f9' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/111211197/medium.jpg'
+  WHEN 'b475c978-89d5-4a03-9f90-ecb4bbd2b3e9' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/6784519/medium.jpeg'
+  WHEN '64a98b65-e8f8-46db-a944-6b3c1826b7ba' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/137902100/medium.jpg'
+  WHEN '03a5db2d-51f8-4ca2-85e1-b683a21ca294' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/208072283/medium.jpeg'
+  WHEN 'f2b883b2-b179-4d93-9e35-a46a1b1e37b2' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/926956/medium.jpg'
+  WHEN '9cf0666b-2435-43b2-aac5-e3bd05a1f3a3' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/60027138/medium.jpeg'
+  WHEN '4e6e0f60-ec28-4f20-92ed-bbeccc40dd7f' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/81548130/medium.jpg'
+  WHEN '8a88c4a3-bb3c-40a6-9c4a-25ace3c014a3' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/67287662/medium.jpg'
+  WHEN '4fb73534-fff5-4c1c-b0c5-1a0bc596cb2e' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/309359974/medium.jpeg'
+  WHEN 'ec49f917-dca4-4a6c-9df1-3592458fb3f3' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/191137959/medium.jpeg'
+  WHEN 'e5f50647-318f-4261-9e7c-fcc5fe64b2fb' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/85092650/medium.jpg'
+END
+WHERE id IN ('27b0348b-c46d-4b7c-9aaf-88c9dc44ed50', 'de0b57f5-0c7f-4b0e-962b-60a3cbd89549', '11dd3c53-259a-4ef4-8ad7-b164bacb86c1', '6b3d1cbd-f97a-4330-a7da-0177654f11c1', '33ae7498-6e36-4229-8790-ddb55b52b60d', '60c8dba5-d222-4243-a546-870cf0ce20d0', '2d587cf6-0f5b-4347-898e-5a15d0c68f3a', '669cc49b-79d3-4bd9-b1c5-5b62c1ba00b1', 'd1009ac2-7f77-481d-b2cb-5941a5542f00', '31b58dc3-22c7-49c8-a110-5db8375b0d49', '1e08735a-184e-430c-8072-013d7f90e447', 'aab4b653-1a78-4285-b684-9e114f11261c', '1d6b78f2-0f05-40cf-948c-3c081b5118db', 'e4e449e9-4adb-4778-9b7e-6978fa0497ae', '74ecfeee-a328-41e0-86fe-83d8207b69f9', 'b475c978-89d5-4a03-9f90-ecb4bbd2b3e9', '64a98b65-e8f8-46db-a944-6b3c1826b7ba', '03a5db2d-51f8-4ca2-85e1-b683a21ca294', 'f2b883b2-b179-4d93-9e35-a46a1b1e37b2', '9cf0666b-2435-43b2-aac5-e3bd05a1f3a3', '4e6e0f60-ec28-4f20-92ed-bbeccc40dd7f', '8a88c4a3-bb3c-40a6-9c4a-25ace3c014a3', '4fb73534-fff5-4c1c-b0c5-1a0bc596cb2e', 'ec49f917-dca4-4a6c-9df1-3592458fb3f3', 'e5f50647-318f-4261-9e7c-fcc5fe64b2fb');
+
+update public.species_catalog
+SET image_url = CASE id
+  WHEN 'b5d01d95-bc29-4a3a-b6cc-b24f328b53d1' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/490632811/medium.jpg'
+  WHEN '971670c7-6eaf-44df-a472-afe9bb9a0ec1' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/71733761/medium.jpg'
+  WHEN '18505462-b756-45f7-804d-41ad77c55ba9' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/67773766/medium.jpeg'
+  WHEN '5ce4c74b-3fb7-4d2e-9f93-ea33d8054649' THEN 'https://inaturalist-open-data.s3.amazonaws.com/photos/11066492/medium.jpg'
+END
+WHERE id IN ('b5d01d95-bc29-4a3a-b6cc-b24f328b53d1', '971670c7-6eaf-44df-a472-afe9bb9a0ec1', '18505462-b756-45f7-804d-41ad77c55ba9', '5ce4c74b-3fb7-4d2e-9f93-ea33d8054649');
+update public.species_catalog set image_url = 'https://static.inaturalist.org/photos/125093582/medium.jpg' where id = 'fcf3a772-07b0-4e63-a194-264e72bc383f';
+update public.species_catalog set image_url = 'https://inaturalist-open-data.s3.amazonaws.com/photos/123781329/medium.jpeg' where id = '03d11d1a-c517-4d48-af38-7ebf7a439ca6';
+update public.species_catalog set image_url = 'https://inaturalist-open-data.s3.amazonaws.com/photos/219037359/medium.jpeg' where id = '714b0a2d-9722-460c-a89e-6c212e3f5d3b';

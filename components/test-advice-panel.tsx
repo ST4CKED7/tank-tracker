@@ -1,0 +1,103 @@
+import Link from "next/link"
+import type { LivestockRow, Tank } from "@/lib/bioload"
+import type { ParameterKey } from "@/lib/parameters"
+import { buildTestAdvice, type AdviceSeverity } from "@/lib/test-advice"
+import { unitPrefsFromTank } from "@/lib/units"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { AlertTriangle, CheckCircle2, Info, Wrench } from "lucide-react"
+
+function severityStyles(severity: AdviceSeverity) {
+  switch (severity) {
+    case "urgent":
+      return "border-rose-500/40 bg-rose-500/5"
+    case "action":
+      return "border-amber-500/35 bg-amber-500/5"
+    case "watch":
+      return "border-amber-500/20 bg-background/40"
+    case "ok":
+      return "border-emerald-500/30 bg-emerald-500/5"
+    default:
+      return "border-primary/15 bg-background/40"
+  }
+}
+
+function SeverityIcon({ severity }: { severity: AdviceSeverity }) {
+  if (severity === "ok") return <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+  if (severity === "urgent" || severity === "action") {
+    return <AlertTriangle className="size-4 text-amber-700 dark:text-amber-300" />
+  }
+  if (severity === "info") return <Info className="size-4 text-primary" />
+  return <Wrench className="size-4 text-muted-foreground" />
+}
+
+export function TestAdvicePanel({
+  tank,
+  latest,
+  livestock,
+  tests,
+  waterChanges,
+  compact = false,
+}: {
+  tank: Tank
+  latest: Partial<Record<ParameterKey, number>>
+  livestock: LivestockRow[]
+  tests: { parameter: string; tested_at: string; value: number }[]
+  waterChanges: { changed_at: string }[]
+  /** Home: hide the all-clear card and info-only noise. */
+  compact?: boolean
+}) {
+  const prefs = unitPrefsFromTank(tank)
+  let advice = buildTestAdvice({
+    tank,
+    latest,
+    livestock,
+    tests,
+    waterChanges,
+    prefs,
+  })
+
+  if (compact) {
+    advice = advice.filter((item) => item.severity === "urgent" || item.severity === "action" || item.severity === "watch")
+    if (advice.length === 0) return null
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{compact ? "Suggested next steps" : "After your readings"}</CardTitle>
+        <CardDescription>
+          {compact
+            ? "Based on latest tests vs your livestock and typical targets."
+            : "Suggestions update when you save a test — water changes, dosing, or cycle checks."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {advice.map((item) => (
+          <div
+            key={item.id}
+            className={cn("space-y-2 rounded-xl border px-3 py-3", severityStyles(item.severity))}
+          >
+            <div className="flex items-start gap-2">
+              <SeverityIcon severity={item.severity} />
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="font-medium leading-snug">{item.title}</div>
+                <p className="text-sm text-muted-foreground">{item.detail}</p>
+                {item.actions.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {item.actions.map((action) => (
+                      <Button key={action.href + action.label} asChild size="sm" variant="secondary" className="min-h-10">
+                        <Link href={action.href}>{action.label}</Link>
+                      </Button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}

@@ -82,14 +82,9 @@ export function parameterMeta(prefs: UnitPrefs | UnitSystem, waterType: WaterTyp
   const base = waterType === "freshwater" ? FRESHWATER_META : SALTWATER_META
   const celsius =
     typeof prefs === "string" ? prefs === "metric" : prefs.temp === "C"
+  // Targets stay in °F (same as stored readings / species catalog). displayRange converts for UI.
   const tempTarget =
-    waterType === "freshwater"
-      ? celsius
-        ? { min: 22, max: 28 }
-        : { min: 72, max: 82 }
-      : celsius
-        ? { min: 24, max: 28 }
-        : { min: 75, max: 82 }
+    waterType === "freshwater" ? { min: 72, max: 82 } : { min: 75, max: 82 }
 
   return {
     ...base,

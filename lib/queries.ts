@@ -12,8 +12,12 @@ export async function getAuthedUserId() {
 }
 
 export async function getUserTanks() {
-  const { supabase } = await getAuthedUserId()
-  const { data } = await supabase.from("tanks").select("*").order("created_at", { ascending: true })
+  const { supabase, userId } = await getAuthedUserId()
+  const { data } = await supabase
+    .from("tanks")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
   return (data ?? []) as Tank[]
 }
 

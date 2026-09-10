@@ -33,6 +33,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         setMessage(error.message)
         return
       }
+      // Ensure session cookies are written before navigation.
+      await supabase.auth.getSession()
       window.location.assign("/")
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Something went wrong. Try again.")

@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 import type { Database } from "@/lib/database.types"
-import { assertSupabaseEnv } from "@/lib/supabase/env"
+import { assertSupabaseEnv, supabaseCookieOptions } from "@/lib/supabase/env"
 
 const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/sw.js", "/manifest.webmanifest"]
 
@@ -19,6 +19,7 @@ export async function updateSession(request: NextRequest) {
   const { url, key } = assertSupabaseEnv()
 
   const supabase = createServerClient<Database>(url, key, {
+    cookieOptions: supabaseCookieOptions,
     cookies: {
       getAll() {
         return request.cookies.getAll()

@@ -1,3 +1,10 @@
+/** Shared cookie lifetime (~400 days) so sessions survive browser restarts and the installed PWA. */
+export const supabaseCookieOptions = {
+  path: "/",
+  sameSite: "lax" as const,
+  maxAge: 400 * 24 * 60 * 60,
+}
+
 export function getSupabaseUrl() {
   return (
     process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||

@@ -9,11 +9,13 @@ import { staggerStyle } from "@/lib/motion"
 
 export function TodayStrip({
   overdue,
+  soon = [],
   outOfRange,
   anomalies,
   primary,
 }: {
   overdue: Reminder[]
+  soon?: Reminder[]
   outOfRange: TestAdvice[]
   anomalies: Anomaly[]
   primary: { label: string; href: string; detail: string }
@@ -23,13 +25,19 @@ export function TodayStrip({
       id: `rem-${item.id}`,
       label: item.title,
       tone: "overdue" as const,
-      href: "/#reminders",
+      href: item.href || "/#notifications",
+    })),
+    ...soon.slice(0, 2).map((item) => ({
+      id: `soon-${item.id}`,
+      label: item.title,
+      tone: "watch" as const,
+      href: item.href || "/#notifications",
     })),
     ...outOfRange.slice(0, 2).map((item) => ({
       id: `adv-${item.id}`,
       label: item.title,
       tone: item.severity === "urgent" || item.severity === "action" ? ("action" as const) : ("watch" as const),
-      href: "/tests",
+      href: item.actions?.[0]?.href ?? "/tests",
     })),
     ...anomalies.slice(0, 2).map((item) => ({
       id: item.id,

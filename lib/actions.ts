@@ -10,7 +10,7 @@ import { resolveSpeciesImageUrl } from "@/lib/species-image"
 import { parseSumpMedia } from "@/lib/sump-media"
 import { parseTankType } from "@/lib/tank-profiles"
 import { defaultTimeZone, listTimeZones } from "@/lib/timezones"
-import { isKitId } from "@/lib/kits"
+import { isKitId, normalizeFavoriteKits, toggleFavoriteKitList, DEFAULT_FAVORITE_KIT } from "@/lib/kits"
 import { parseLivestockSex, type LivestockSex } from "@/lib/bioload"
 import { parseTankIcon, parseTankIconColor } from "@/lib/tank-icons"
 import { parseTankTheme } from "@/lib/tank-themes"
@@ -149,19 +149,45 @@ export async function upsertTank(formData: FormData) {
   revalidateTankShell()
 }
 
-export async function setDefaultTestKit(formData: FormData) {
+export async function toggleFavoriteTestKit(formData: FormData) {
   const { supabase, userId } = await requireUser()
   const tankId = String(formData.get("tank_id") || "")
   const kit = String(formData.get("kit") || "")
+  const waterType = String(formData.get("water_type") || "saltwater") === "freshwater" ? "freshwater" : "saltwater"
   if (!tankId || !isKitId(kit)) return
+
+  const { data: tank } = await supabase
+    .from("tanks")
+    .select("favorite_test_kits, default_test_kit")
+    .eq("id", tankId)
+    .eq("user_id", userId)
+    .maybeSingle()
+  if (!tank) return
+
+  const current = normalizeFavoriteKits(
+    tank.favorite_test_kits != null
+      ? tank.favorite_test_kits
+      : [tank.default_test_kit, DEFAULT_FAVORITE_KIT],
+    waterType,
+  )
+  const next = toggleFavoriteKitList(current, kit, waterType)
+
   const { error } = await supabase
     .from("tanks")
-    .update({ default_test_kit: kit })
+    .update({
+      favorite_test_kits: next,
+      default_test_kit: next[0] ?? null,
+    })
     .eq("id", tankId)
     .eq("user_id", userId)
   if (error) throw error
   revalidatePath("/tests")
   revalidateTankShell()
+}
+
+/** @deprecated Prefer toggleFavoriteTestKit */
+export async function setDefaultTestKit(formData: FormData) {
+  return toggleFavoriteTestKit(formData)
 }
 
 export async function updateUnitPrefs(formData: FormData) {

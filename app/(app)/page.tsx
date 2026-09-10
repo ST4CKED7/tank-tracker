@@ -4,9 +4,9 @@ import { CsvExport, LatestReadings } from "@/components/latest-readings"
 import { EmptyState } from "@/components/empty-state"
 import { PageHero } from "@/components/page-hero"
 import { PullToRefresh } from "@/components/pull-to-refresh"
+import { NotificationsPanel } from "@/components/notifications-panel"
 import { RemindersPanel } from "@/components/reminders-panel"
 import { TankForm } from "@/components/tank-form"
-import { TemperatureLogCard } from "@/components/temperature-log-card"
 import { TestAdvicePanel } from "@/components/test-advice-panel"
 import { TodayStrip } from "@/components/today-strip"
 import { detectAnomalies } from "@/lib/anomalies"
@@ -91,6 +91,7 @@ export default async function HomePage() {
     (item) => item.severity === "urgent" || item.severity === "action" || item.severity === "watch",
   )
   const overdue = reminders.filter((item) => item.overdue)
+  const soon = reminders.filter((item) => item.soon)
   const anomalies = detectAnomalies(testPoints, prefs, waterType)
 
   const primary =
@@ -100,6 +101,12 @@ export default async function HomePage() {
           href: "/#reminders",
           detail: overdue[0].detail,
         }
+      : overdue[0]
+        ? {
+            label: overdue[0].kind === "equipment" ? "Open gear" : "Open tests",
+            href: overdue[0].href,
+            detail: overdue[0].detail,
+          }
       : outOfRange[0]
         ? {
             label: "Review chemistry",
@@ -140,15 +147,15 @@ export default async function HomePage() {
           actions={<CsvExport tests={data.tests} />}
         />
 
-        <TodayStrip overdue={overdue} outOfRange={outOfRange} anomalies={anomalies} primary={primary} />
-
-        <TemperatureLogCard
-          tankId={data.tank.id}
-          lastValueF={data.latest.temperature ?? null}
-          lastAt={
-            data.tests.find((test) => test.parameter === "temperature")?.tested_at ?? null
-          }
+        <TodayStrip
+          overdue={overdue}
+          soon={soon}
+          outOfRange={outOfRange}
+          anomalies={anomalies}
+          primary={primary}
         />
+
+        <NotificationsPanel reminders={reminders} advice={advice} />
 
         {Object.keys(data.latest).length === 0 ? (
           <EmptyState
@@ -187,18 +194,20 @@ export default async function HomePage() {
           />
         ) : null}
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <BioloadGauge tank={data.tank} livestock={data.livestock} nitrateWarning={nitrateWarning} />
-          <div id="reminders">
-            <RemindersPanel tank={data.tank} reminders={reminders} />
+        <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+          <div className="space-y-6">
+            <BioloadGauge tank={data.tank} livestock={data.livestock} nitrateWarning={nitrateWarning} />
+            <div id="reminders">
+              <RemindersPanel tank={data.tank} />
+            </div>
           </div>
+          <CleanupCrewPanel
+            tank={data.tank}
+            livestock={data.livestock}
+            catalog={data.catalog}
+            latest={data.latest}
+          />
         </div>
-        <CleanupCrewPanel
-          tank={data.tank}
-          livestock={data.livestock}
-          catalog={data.catalog}
-          latest={data.latest}
-        />
         <Card className="tt-fade-up">
           <CardHeader>
             <CardTitle>Recommended parameter window</CardTitle>

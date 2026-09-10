@@ -213,7 +213,36 @@ export function kitsFor(waterType: WaterType) {
 export function defaultKitFor(waterType: WaterType, preferred?: string | null): KitId {
   const available = kitsFor(waterType)
   if (preferred && available.some((kit) => kit.id === preferred)) return preferred as KitId
+  if (available.some((kit) => kit.id === "instruments")) return "instruments"
   return available[0]?.id ?? "other"
+}
+
+/** Default favorite when a tank has never customized the list. */
+export const DEFAULT_FAVORITE_KIT: KitId = "instruments"
+
+/**
+ * Normalize starred kits for a water type.
+ * `null`/`undefined` seeds Instruments; an empty array means the user cleared favorites.
+ */
+export function normalizeFavoriteKits(raw: unknown, waterType: WaterType): KitId[] {
+  const available = new Set(kitsFor(waterType).map((kit) => kit.id))
+  if (raw == null) {
+    return available.has(DEFAULT_FAVORITE_KIT) ? [DEFAULT_FAVORITE_KIT] : []
+  }
+  const list = Array.isArray(raw) ? raw : typeof raw === "string" && raw ? [raw] : []
+  const unique: KitId[] = []
+  for (const id of list) {
+    if (isKitId(id) && available.has(id) && !unique.includes(id)) unique.push(id)
+  }
+  return unique
+}
+
+export function toggleFavoriteKitList(current: KitId[], kit: KitId, waterType: WaterType): KitId[] {
+  if (!isKitId(kit)) return normalizeFavoriteKits(current, waterType)
+  const set = new Set(normalizeFavoriteKits(current, waterType))
+  if (set.has(kit)) set.delete(kit)
+  else set.add(kit)
+  return normalizeFavoriteKits([...set], waterType)
 }
 
 function apiColors(parameter: "ph" | "ammonia" | "nitrite" | "nitrate" | "phosphate"): number[] | undefined {

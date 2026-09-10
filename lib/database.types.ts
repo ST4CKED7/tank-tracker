@@ -245,6 +245,7 @@ export type Database = {
           water_change_percent: number
           water_type: Database["public"]["Enums"]["water_type"]
           default_test_kit: string | null
+          favorite_test_kits: string[]
           icon: string
           icon_color: string
           color_theme: string
@@ -268,6 +269,7 @@ export type Database = {
           water_change_percent?: number
           water_type?: Database["public"]["Enums"]["water_type"]
           default_test_kit?: string | null
+          favorite_test_kits?: string[]
           icon?: string
           icon_color?: string
           color_theme?: string

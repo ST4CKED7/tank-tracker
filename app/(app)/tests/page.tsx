@@ -1,5 +1,4 @@
 import { EmptyState } from "@/components/empty-state"
-import { TemperatureLogCard } from "@/components/temperature-log-card"
 import { TestAdvicePanel } from "@/components/test-advice-panel"
 import { TestLogger } from "@/components/test-logger"
 import { PageHero } from "@/components/page-hero"
@@ -29,15 +28,8 @@ export default async function TestsPage() {
           title="Log a test"
           description={
             fw
-              ? "API, Seachem, strips, Hanna checkers, KH kits, and probes — pick a method and set your default. Temperature has its own quick log below."
-              : "API, Salifert, Red Sea, Nyos, Hanna checkers, strips, and instruments — pick what you use and set a default. Temperature has its own quick log below."
-          }
-        />
-        <TemperatureLogCard
-          tankId={data.tank.id}
-          lastValueF={data.latest.temperature ?? null}
-          lastAt={
-            data.tests.find((test) => test.parameter === "temperature")?.tested_at ?? null
+              ? "Star the kits you use most. Instruments starts starred for temperature and pH probes."
+              : "Star the kits you use most. Instruments starts starred for salinity, temperature, and probes."
           }
         />
         {!hasTests ? (
@@ -62,6 +54,7 @@ export default async function TestsPage() {
         <TestLogger
           tankId={data.tank.id}
           waterType={data.tank.water_type === "freshwater" ? "freshwater" : "saltwater"}
+          favoriteKitIds={data.tank.favorite_test_kits}
           defaultKitId={data.tank.default_test_kit}
         />
       </div>

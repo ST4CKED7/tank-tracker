@@ -2,25 +2,20 @@
 
 import { useMemo, useState } from "react"
 import { logWaterChange } from "@/lib/actions"
-import { waterChangeGallons, type Reminder } from "@/lib/reminders"
+import { waterChangeGallons } from "@/lib/reminders"
 import { saltMixForGallons } from "@/lib/salt-mix"
 import type { Tank } from "@/lib/bioload"
-import { Button } from "@/components/ui/button"
 import { SubmitButton } from "@/components/submit-button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { format } from "date-fns"
-import { useEffect } from "react"
 import { useUnits } from "@/components/units-provider"
 import { displayVolume, formatVolume, volumeLabel } from "@/lib/units"
 
 export function RemindersPanel({
   tank,
-  reminders,
 }: {
   tank: Tank
-  reminders: Reminder[]
 }) {
   const system = useUnits()
   const fw = tank.water_type === "freshwater"
@@ -29,46 +24,13 @@ export function RemindersPanel({
   const salt = useMemo(() => saltMixForGallons(mixGallons), [mixGallons])
   const mixedDisplay = displayVolume(mixGallons, system)
 
-  useEffect(() => {
-    if (typeof window === "undefined" || Notification.permission !== "granted") return
-    const overdue = reminders.filter((item) => item.overdue)
-    if (overdue.length === 0) return
-    const key = `tt-notified-${overdue.map((item) => item.id).join(",")}`
-    if (sessionStorage.getItem(key)) return
-    new Notification("Tank Tracker", {
-      body: overdue.map((item) => item.title).join(", "),
-    })
-    sessionStorage.setItem(key, "1")
-  }, [reminders])
-
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Due now</CardTitle>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => Notification.requestPermission()}
-        >
-          Enable notifications
-        </Button>
+      <CardHeader>
+        <CardTitle>Water change</CardTitle>
+        <CardDescription>Mix volume and log a change when you&apos;re ready.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <ul className="space-y-2 text-sm">
-          {reminders.map((item) => (
-            <li key={item.id} className="rounded-xl border bg-background/50 px-3 py-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-medium">{item.title}</span>
-                <span className={item.overdue ? "text-destructive" : "text-muted-foreground"}>
-                  {item.overdue ? "Due" : format(item.due, "MMM d")}
-                </span>
-              </div>
-              <p className="text-muted-foreground">{item.detail}</p>
-            </li>
-          ))}
-        </ul>
-
         <div className="space-y-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
           <div className="font-medium">Water change calculator</div>
           <div className="grid gap-3 sm:grid-cols-2">

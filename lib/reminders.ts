@@ -4,14 +4,21 @@ import type { Tables } from "@/lib/database.types"
 import { saltMixForGallons, waterChangeVolumeGallons } from "@/lib/salt-mix"
 import { formatVolume, unitPrefsFromTank } from "@/lib/units"
 
+export type ReminderKind = "water_change" | "test" | "equipment"
+
 export type Reminder = {
   id: string
   title: string
   detail: string
   due: Date
   overdue: boolean
-  kind: "water_change" | "test" | "equipment"
+  /** Due today or within the next N days (and not overdue). */
+  soon: boolean
+  kind: ReminderKind
+  href: string
 }
+
+const SOON_DAYS = 2
 
 export function buildReminders(input: {
   tank: Tank
@@ -34,46 +41,85 @@ export function buildReminders(input: {
     ? parseISO(input.lastWaterChange)
     : parseISO(input.tank.created_at)
   const changeDue = addDays(lastChange, interval)
-  reminders.push({
+  reminders.push(makeReminder({
     id: "water-change",
     title: "Water change",
     detail: fw
       ? `${percent}% ≈ ${formatVolume(mixGallons, prefs)} of dechlorinated water`
       : `${percent}% ≈ ${formatVolume(mixGallons, prefs)} · ~${salt.cups} cups / ${salt.grams}g salt`,
     due: changeDue,
-    overdue: differenceInCalendarDays(now, changeDue) >= 0,
+    now,
     kind: "water_change",
-  })
+    href: "/#reminders",
+  }))
 
   const lastTest = input.lastTest ? parseISO(input.lastTest) : parseISO(input.tank.created_at)
   const testDue = addDays(lastTest, 7)
-  reminders.push({
+  reminders.push(makeReminder({
     id: "weekly-test",
     title: "Weekly water tests",
     detail: fw
       ? "Freshwater kit: pH, ammonia, nitrite, nitrate. Also log KH and temperature."
       : "Saltwater kit: pH, ammonia, nitrite, nitrate. Reef kit: calcium, alkalinity, phosphate, nitrate. Also log salinity and temperature.",
     due: testDue,
-    overdue: differenceInCalendarDays(now, testDue) >= 0,
+    now,
     kind: "test",
-  })
+    href: "/tests",
+  }))
 
   for (const item of input.equipment) {
-    const last = item.last_serviced_at ? parseISO(item.last_serviced_at) : item.installed_at ? parseISO(item.installed_at) : parseISO(input.tank.created_at)
+    const last = item.last_serviced_at
+      ? parseISO(item.last_serviced_at)
+      : item.installed_at
+        ? parseISO(item.installed_at)
+        : parseISO(input.tank.created_at)
     const due = addDays(last, item.service_every_days)
-    reminders.push({
+    reminders.push(makeReminder({
       id: `eq-${item.id}`,
       title: `Service ${item.name}`,
       detail: `${item.equipment_type} · every ${item.service_every_days} days`,
       due,
-      overdue: differenceInCalendarDays(now, due) >= 0,
+      now,
       kind: "equipment",
-    })
+      href: "/equipment",
+    }))
   }
 
-  return reminders.sort((a, b) => a.due.getTime() - b.due.getTime())
+  return reminders.sort((a, b) => {
+    if (a.overdue !== b.overdue) return a.overdue ? -1 : 1
+    if (a.soon !== b.soon) return a.soon ? -1 : 1
+    return a.due.getTime() - b.due.getTime()
+  })
+}
+
+function makeReminder(input: {
+  id: string
+  title: string
+  detail: string
+  due: Date
+  now: Date
+  kind: ReminderKind
+  href: string
+}): Reminder {
+  const daysUntil = differenceInCalendarDays(input.due, input.now)
+  const overdue = daysUntil <= 0
+  const soon = !overdue && daysUntil <= SOON_DAYS
+  return {
+    id: input.id,
+    title: input.title,
+    detail: input.detail,
+    due: input.due,
+    overdue,
+    soon,
+    kind: input.kind,
+    href: input.href,
+  }
 }
 
 export function waterChangeGallons(tank: Tank, percent = tank.water_change_percent) {
   return waterChangeVolumeGallons(Number(tank.gallons), Number(percent))
+}
+
+export function actionableReminders(reminders: Reminder[]) {
+  return reminders.filter((item) => item.overdue || item.soon)
 }

@@ -1,13 +1,15 @@
 "use client"
 
 import { useEffect, useMemo, useState, useTransition } from "react"
-import { logTest, setDefaultTestKit } from "@/lib/actions"
+import { logTest, toggleFavoriteTestKit } from "@/lib/actions"
 import { parameterMeta, type ParameterKey, type WaterType } from "@/lib/parameters"
 import {
   KIT_CATEGORY_LABEL,
   KIT_DISCLAIMER,
   defaultKitFor,
   kitsFor,
+  normalizeFavoriteKits,
+  DEFAULT_FAVORITE_KIT,
   type KitCategory,
   type KitId,
   type TestGuide,
@@ -40,30 +42,46 @@ const MANUAL_KITS: KitId[] = ["other", "instruments"]
 
 const CATEGORY_ORDER: KitCategory[] = ["liquid", "titration", "digital", "strips", "instrument"]
 
+type KitItem = ReturnType<typeof kitsFor>[number]
+
 export function TestLogger({
   tankId,
   waterType = "saltwater",
+  favoriteKitIds = null,
   defaultKitId = null,
 }: {
   tankId: string
   waterType?: WaterType
+  favoriteKitIds?: string[] | null
+  /** @deprecated Prefer favoriteKitIds */
   defaultKitId?: string | null
 }) {
   const availableKits = useMemo(() => kitsFor(waterType), [waterType])
-  const resolvedDefault = defaultKitFor(waterType, defaultKitId)
+  const initialFavorites = useMemo(
+    () =>
+      normalizeFavoriteKits(
+        favoriteKitIds != null ? favoriteKitIds : [defaultKitId, DEFAULT_FAVORITE_KIT],
+        waterType,
+      ),
+    [favoriteKitIds, defaultKitId, waterType],
+  )
+  const resolvedDefault = defaultKitFor(waterType, initialFavorites[0] ?? defaultKitId)
   const [kit, setKit] = useState<KitId>(resolvedDefault)
-  const [savedDefault, setSavedDefault] = useState<KitId>(resolvedDefault)
+  const [favorites, setFavorites] = useState<KitId[]>(initialFavorites)
   const [guideId, setGuideId] = useState("")
   const [drops, setDrops] = useState(20)
   const [value, setValue] = useState(waterType === "freshwater" ? "7.2" : "8.2")
   const [timerOn, setTimerOn] = useState(false)
-  const [pendingDefault, startDefault] = useTransition()
+  const [pendingFavorite, startFavorite] = useTransition()
 
   useEffect(() => {
-    const next = defaultKitFor(waterType, defaultKitId)
-    setKit(next)
-    setSavedDefault(next)
-  }, [waterType, defaultKitId])
+    const nextFavorites = normalizeFavoriteKits(
+      favoriteKitIds != null ? favoriteKitIds : [defaultKitId, DEFAULT_FAVORITE_KIT],
+      waterType,
+    )
+    setFavorites(nextFavorites)
+    setKit(defaultKitFor(waterType, nextFavorites[0] ?? defaultKitId))
+  }, [waterType, favoriteKitIds, defaultKitId])
 
   const guides = useMemo(() => TEST_GUIDES.filter((guide) => guide.kit === kit), [kit])
   const guide = TEST_GUIDES.find((item) => item.id === guideId) ?? guides[0]
@@ -87,10 +105,21 @@ export function TestLogger({
       ? Number((drops * guide.titration.dropUnit).toFixed(2))
       : Number(value)
 
+  const favoriteSet = useMemo(() => new Set(favorites), [favorites])
+
+  const favoriteItems = useMemo(
+    () =>
+      favorites
+        .map((id) => availableKits.find((item) => item.id === id))
+        .filter((item): item is KitItem => Boolean(item)),
+    [favorites, availableKits],
+  )
+
   const grouped = useMemo(() => {
-    const map = new Map<KitCategory, typeof availableKits>()
+    const map = new Map<KitCategory, KitItem[]>()
     for (const category of CATEGORY_ORDER) map.set(category, [])
     for (const item of availableKits) {
+      if (favoriteSet.has(item.id)) continue
       map.get(item.category)?.push(item)
     }
     return CATEGORY_ORDER.map((category) => ({
@@ -98,16 +127,66 @@ export function TestLogger({
       label: KIT_CATEGORY_LABEL[category],
       items: map.get(category) ?? [],
     })).filter((group) => group.items.length > 0)
-  }, [availableKits])
+  }, [availableKits, favoriteSet])
 
-  function saveDefault(nextKit: KitId) {
+  function toggleFavorite(nextKit: KitId) {
     const fd = new FormData()
     fd.set("tank_id", tankId)
     fd.set("kit", nextKit)
-    startDefault(async () => {
-      await setDefaultTestKit(fd)
-      setSavedDefault(nextKit)
+    fd.set("water_type", waterType)
+    startFavorite(async () => {
+      await toggleFavoriteTestKit(fd)
+      setFavorites((current) => {
+        const set = new Set(current)
+        if (set.has(nextKit)) set.delete(nextKit)
+        else set.add(nextKit)
+        return normalizeFavoriteKits([...set], waterType)
+      })
     })
+  }
+
+  function renderKitRow(item: KitItem) {
+    const selected = kit === item.id
+    const isFavorite = favoriteSet.has(item.id)
+    return (
+      <div
+        key={item.id}
+        className={cn(
+          "flex min-h-11 w-full items-stretch gap-1 rounded-xl border transition-colors",
+          selected ? "border-primary bg-primary/10 shadow-sm" : "hover:bg-muted/60",
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => setKit(item.id)}
+          className="min-w-0 flex-1 px-3 py-2.5 text-left text-sm"
+        >
+          <div className="font-medium leading-snug">{item.shortLabel}</div>
+          <div className="mt-0.5 text-xs text-muted-foreground">{item.blurb}</div>
+          <div className="mt-1 text-[11px] text-muted-foreground/90">{item.tests.join(" · ")}</div>
+        </button>
+        <button
+          type="button"
+          title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+          aria-label={isFavorite ? `Unfavorite ${item.shortLabel}` : `Favorite ${item.shortLabel}`}
+          aria-pressed={isFavorite}
+          disabled={pendingFavorite}
+          onClick={(event) => {
+            event.stopPropagation()
+            toggleFavorite(item.id)
+          }}
+          className={cn(
+            "flex w-11 shrink-0 items-center justify-center rounded-r-[0.7rem] border-l border-transparent transition-colors",
+            isFavorite
+              ? "text-amber-500"
+              : "text-muted-foreground hover:bg-background/70 hover:text-amber-500",
+            pendingFavorite && "opacity-60",
+          )}
+        >
+          <Star className={cn("size-4", isFavorite && "fill-current")} />
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -115,61 +194,30 @@ export function TestLogger({
       <Card>
         <CardHeader>
           <CardTitle>Choose a kit or method</CardTitle>
-          <CardDescription>{KIT_DISCLAIMER}</CardDescription>
+          <CardDescription>
+            Star the kits you use — they pin under Favorites. Instruments starts starred so salinity, temperature, and
+            probes are easy to find.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {favoriteItems.length > 0 ? (
+            <div className="space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Favorites
+              </div>
+              <div className="space-y-2">{favoriteItems.map(renderKitRow)}</div>
+            </div>
+          ) : null}
+
           {grouped.map((group) => (
             <div key={group.category} className="space-y-2">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 {group.label}
               </div>
-              <div className="space-y-2">
-                {group.items.map((item) => {
-                  const selected = kit === item.id
-                  const isDefault = savedDefault === item.id
-                  return (
-                    <div
-                      key={item.id}
-                      className={cn(
-                        "flex min-h-11 w-full items-stretch gap-1 rounded-xl border transition-colors",
-                        selected ? "border-primary bg-primary/10 shadow-sm" : "hover:bg-muted/60",
-                      )}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setKit(item.id)}
-                        className="min-w-0 flex-1 px-3 py-2.5 text-left text-sm"
-                      >
-                        <div className="font-medium leading-snug">{item.shortLabel}</div>
-                        <div className="mt-0.5 text-xs text-muted-foreground">{item.blurb}</div>
-                        <div className="mt-1 text-[11px] text-muted-foreground/90">{item.tests.join(" · ")}</div>
-                      </button>
-                      <button
-                        type="button"
-                        title={isDefault ? "Default kit" : "Set as default kit"}
-                        aria-label={isDefault ? `${item.shortLabel} is your default` : `Set ${item.shortLabel} as default`}
-                        aria-pressed={isDefault}
-                        disabled={pendingDefault}
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          if (!isDefault) saveDefault(item.id)
-                        }}
-                        className={cn(
-                          "flex w-11 shrink-0 items-center justify-center rounded-r-[0.7rem] border-l border-transparent transition-colors",
-                          isDefault
-                            ? "text-amber-500"
-                            : "text-muted-foreground hover:bg-background/70 hover:text-amber-500",
-                          pendingDefault && "opacity-60",
-                        )}
-                      >
-                        <Star className={cn("size-4", isDefault && "fill-current")} />
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
+              <div className="space-y-2">{group.items.map(renderKitRow)}</div>
             </div>
           ))}
+          <p className="text-[11px] text-muted-foreground">{KIT_DISCLAIMER}</p>
         </CardContent>
       </Card>
 

@@ -3,9 +3,18 @@ import { NextResponse, type NextRequest } from "next/server"
 import type { Database } from "@/lib/database.types"
 import { assertSupabaseEnv } from "@/lib/supabase/env"
 
-const PUBLIC_PATHS = ["/login", "/signup", "/auth"]
+const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/sw.js", "/manifest.webmanifest"]
 
 export async function updateSession(request: NextRequest) {
+  const path = request.nextUrl.pathname
+  if (
+    path === "/sw.js" ||
+    path === "/manifest.webmanifest" ||
+    path.startsWith("/icons/")
+  ) {
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({ request })
   const { url, key } = assertSupabaseEnv()
 
@@ -31,19 +40,18 @@ export async function updateSession(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims()
   const user = data?.claims
-  const path = request.nextUrl.pathname
   const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`))
 
   if (!user && !isPublic) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/login"
-    return NextResponse.redirect(url)
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = "/login"
+    return NextResponse.redirect(redirectUrl)
   }
 
   if (user && (path === "/login" || path === "/signup")) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/"
-    return NextResponse.redirect(url)
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = "/"
+    return NextResponse.redirect(redirectUrl)
   }
 
   return supabaseResponse

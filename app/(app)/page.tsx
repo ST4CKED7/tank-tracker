@@ -19,6 +19,7 @@ import { buildReminders } from "@/lib/reminders"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { sumpMediaLabel } from "@/lib/sump-media"
 import { formatVolume, unitPrefsFromTank } from "@/lib/units"
+import { displayTankType } from "@/lib/tank-profiles"
 
 export default async function HomePage() {
   const data = await getDashboardData()
@@ -47,11 +48,7 @@ export default async function HomePage() {
   const waterType = data.tank.water_type === "freshwater" ? "freshwater" : "saltwater"
   const fw = isFreshwater(waterType)
   const meta = parameterMeta(prefs, waterType)
-  const typeLabel = fw
-    ? "freshwater"
-    : data.tank.tank_type === "mixed_reef"
-      ? "mixed reef"
-      : "FOWLR"
+  const typeLabel = displayTankType(data.tank)
   const mediaLabels = (data.tank.sump_media ?? []).map(sumpMediaLabel)
   const mediaBit =
     mediaLabels.length === 0

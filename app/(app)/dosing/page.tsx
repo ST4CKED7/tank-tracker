@@ -1,6 +1,7 @@
 import { DosingPanel } from "@/components/dosing-panel"
 import { PageHero } from "@/components/page-hero"
 import { TankForm } from "@/components/tank-form"
+import { systemGallons } from "@/lib/bioload"
 import { getDashboardData } from "@/lib/queries"
 import { isFreshwater } from "@/lib/parameters"
 
@@ -15,11 +16,16 @@ export default async function DosingPage() {
         title="Dosing"
         description={
           fw
-            ? "Log fertilizers, GH/KH buffers, medications, or anything else you add."
-            : "Log two-part, calcium, mag, or anything else you add."
+            ? "Seachem calculator for Prime, buffers, Flourish — then log what you add."
+            : "Seachem calculator for Reef Buffer, calcium, mag — then log what you add."
         }
       />
-      <DosingPanel tankId={data.tank.id} doses={data.doses} freshwater={fw} />
+      <DosingPanel
+        tankId={data.tank.id}
+        doses={data.doses}
+        freshwater={fw}
+        systemGallons={systemGallons(data.tank)}
+      />
     </div>
   )
 }

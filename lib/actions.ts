@@ -8,6 +8,7 @@ import type { ParameterKey } from "@/lib/parameters"
 import { toStoredLength, toStoredTemp, toStoredVolume, legacyUnitSystem, parseLengthUnit, parseTempUnit, parseVolumeUnit, unitPrefsFromTank, type UnitPrefs } from "@/lib/units"
 import { resolveSpeciesImageUrl } from "@/lib/species-image"
 import { parseSumpMedia } from "@/lib/sump-media"
+import { parseTankType } from "@/lib/tank-profiles"
 import { defaultTimeZone, listTimeZones } from "@/lib/timezones"
 
 async function tankPrefs(supabase: Awaited<ReturnType<typeof createClient>>, tankId: string): Promise<UnitPrefs> {
@@ -91,10 +92,7 @@ export async function upsertTank(formData: FormData) {
   const { supabase, userId } = await requireUser()
   const id = String(formData.get("id") || "")
   const waterType = String(formData.get("water_type") || "saltwater") === "freshwater" ? "freshwater" : "saltwater"
-  const tankType =
-    waterType === "freshwater"
-      ? "fowlr"
-      : (String(formData.get("tank_type") || "mixed_reef") as "fowlr" | "mixed_reef")
+  const tankType = parseTankType(formData.get("tank_type"), waterType)
   const hasSump = String(formData.get("has_sump") || "") === "true"
   const sumpGallonsRaw = Number(formData.get("sump_volume") || 0)
   const sumpMedia = hasSump ? parseSumpMedia(formData.getAll("sump_media")) : []

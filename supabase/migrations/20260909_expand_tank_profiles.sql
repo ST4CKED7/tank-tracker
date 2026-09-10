@@ -1,0 +1,12 @@
+-- Expand tank profiles for saltwater and freshwater styles.
+ALTER TYPE public.tank_type ADD VALUE IF NOT EXISTS 'sps_reef';
+ALTER TYPE public.tank_type ADD VALUE IF NOT EXISTS 'lps_reef';
+ALTER TYPE public.tank_type ADD VALUE IF NOT EXISTS 'softie_reef';
+ALTER TYPE public.tank_type ADD VALUE IF NOT EXISTS 'nano_reef';
+ALTER TYPE public.tank_type ADD VALUE IF NOT EXISTS 'community';
+ALTER TYPE public.tank_type ADD VALUE IF NOT EXISTS 'planted';
+ALTER TYPE public.tank_type ADD VALUE IF NOT EXISTS 'aquascape';
+ALTER TYPE public.tank_type ADD VALUE IF NOT EXISTS 'african_cichlid';
+ALTER TYPE public.tank_type ADD VALUE IF NOT EXISTS 'discus';
+ALTER TYPE public.tank_type ADD VALUE IF NOT EXISTS 'shrimp';
+ALTER TYPE public.tank_type ADD VALUE IF NOT EXISTS 'goldfish';

@@ -1,6 +1,7 @@
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { bioloadSummary, systemGallons, type LivestockRow, type Tank } from "@/lib/bioload"
+import { tankProfile } from "@/lib/tank-profiles"
 import { cn } from "@/lib/utils"
 import { formatVolume, unitPrefsFromTank } from "@/lib/units"
 
@@ -32,14 +33,20 @@ export function BioloadGauge({
           {tank.water_type === "freshwater" ? (
             <>
               Fish length × factor and invert points vs {formatVolume(systemGallons(tank), prefs)}
-              {tank.has_sump ? " (display + sump)" : ""}. Update each fish’s current length as it grows.
+              {tank.has_sump ? " (display + sump)" : ""}
+              {tankProfile(tank.tank_type).bioloadFactor !== 1
+                ? ` × ${tankProfile(tank.tank_type).bioloadFactor} for ${tankProfile(tank.tank_type).label.toLowerCase()}`
+                : ""}
+              . Update each fish’s current length as it grows.
             </>
           ) : (
             <>
               Fish length × factor, invert points, and coral size vs {formatVolume(systemGallons(tank), prefs)}
               {tank.has_sump ? " (display + sump)" : ""}
-              {tank.tank_type === "mixed_reef" ? " × 0.75 for mixed reef" : " (FOWLR)"}. Update each fish’s current
-              length as it grows. Corals counted: {summary.coralCount}.
+              {tankProfile(tank.tank_type).bioloadFactor !== 1
+                ? ` × ${tankProfile(tank.tank_type).bioloadFactor} for ${tankProfile(tank.tank_type).label.toLowerCase()}`
+                : ` (${tankProfile(tank.tank_type).label})`}
+              . Update each fish’s current length as it grows. Corals counted: {summary.coralCount}.
             </>
           )}
         </p>

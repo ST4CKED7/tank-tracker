@@ -128,6 +128,7 @@
       radial-gradient(ellipse 70% 45% at 100% 0%, oklch(0.82 0.1 55 / 0.22), transparent 50%),
       radial-gradient(ellipse 50% 40% at 70% 110%, oklch(0.7 0.08 230 / 0.15), transparent 50%);
     background-attachment: fixed;
+    transition: background-color 200ms ease, color 200ms ease;
   }
   .dark body {
     background-image:

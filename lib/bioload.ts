@@ -1,4 +1,5 @@
 import type { Tables } from "@/lib/database.types"
+import { tankProfile } from "@/lib/tank-profiles"
 
 export type Tank = Tables<"tanks">
 export type Species = Tables<"species_catalog">
@@ -55,8 +56,7 @@ export function systemGallons(tank: Tank) {
 
 export function tankCapacity(tank: Tank) {
   const gallons = systemGallons(tank)
-  if (tank.water_type === "freshwater") return gallons
-  return tank.tank_type === "mixed_reef" ? gallons * 0.75 : gallons
+  return gallons * tankProfile(tank.tank_type).bioloadFactor
 }
 
 export function bioloadSummary(tank: Tank, livestock: LivestockRow[]) {

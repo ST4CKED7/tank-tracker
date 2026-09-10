@@ -2,6 +2,7 @@ import type { ParameterKey } from "@/lib/parameters"
 import type { LivestockRow, Species, Tank } from "@/lib/bioload"
 import { bioloadSummary, livestockPoints, tankCapacity } from "@/lib/bioload"
 import { assessCleanupCrew, cleanupRoleLabel, cleanupRoles, isCleanupSpecies } from "@/lib/cleanup-crew"
+import { tankProfile } from "@/lib/tank-profiles"
 
 export type RangeMap = Partial<
   Record<ParameterKey, { min: number; max: number; sources: string[] }>
@@ -78,9 +79,10 @@ export function evaluateSpecies(
   }
 
   if (tank.water_type !== "freshwater") {
-    if (tank.tank_type === "mixed_reef" && candidate.reef_safe === "no") {
-      reasons.push("Not reef-safe for a mixed reef")
-    } else if (tank.tank_type === "mixed_reef" && candidate.reef_safe === "caution") {
+    const reef = tankProfile(tank.tank_type).reefSafeRequired
+    if (reef && candidate.reef_safe === "no") {
+      reasons.push(`Not reef-safe for a ${tankProfile(tank.tank_type).label.toLowerCase()} tank`)
+    } else if (reef && candidate.reef_safe === "caution") {
       reasons.push("Reef-safe with caution — may nip corals or bother inverts")
     }
   }

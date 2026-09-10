@@ -342,7 +342,7 @@ export type Database = {
       coral_size: "frag" | "small" | "colony"
       reef_safe: "yes" | "caution" | "no"
       species_kind: "fish" | "coral" | "invert" | "plant"
-      tank_type: "fowlr" | "mixed_reef"
+      tank_type: "fowlr" | "mixed_reef" | "sps_reef" | "lps_reef" | "softie_reef" | "nano_reef" | "community" | "planted" | "aquascape" | "african_cichlid" | "discus" | "shrimp" | "goldfish"
       temperament: "peaceful" | "semi_aggressive" | "aggressive"
       unit_system: "imperial" | "metric"
       water_type: "saltwater" | "freshwater"

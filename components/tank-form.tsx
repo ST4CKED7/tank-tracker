@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SUMP_MEDIA_OPTIONS, type SumpMediaId } from "@/lib/sump-media"
+import { defaultTankType, profilesForWater } from "@/lib/tank-profiles"
 import { defaultTimeZone, timeZoneGroups } from "@/lib/timezones"
 import { displayVolume, unitPrefsFromTank, volumeLabel, type VolumeUnit } from "@/lib/units"
 import { useUnits } from "@/components/units-provider"
@@ -107,27 +108,32 @@ export function TankForm({ tank, mode = "auto" }: { tank: Tank | null; mode?: "a
             <Label htmlFor="volume">Display volume ({volumeLabel(volumeUnit)})</Label>
             <Input key={volumeUnit} id="volume" name="volume" type="number" step="0.1" defaultValue={volumeDefault} required />
           </div>
-          {waterType === "saltwater" ? (
-            <div className="space-y-1">
-              <Label htmlFor="tank_type">Type</Label>
-              <select
-                id="tank_type"
-                name="tank_type"
-                defaultValue={tank?.tank_type ?? "mixed_reef"}
-                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="mixed_reef">Mixed reef</option>
-                <option value="fowlr">FOWLR</option>
-              </select>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <Label>Type</Label>
-              <div className="flex h-9 items-center rounded-md border bg-muted/40 px-3 text-sm text-muted-foreground">
-                Freshwater community
-              </div>
-            </div>
-          )}
+          <div className="space-y-1 sm:col-span-2">
+            <Label htmlFor="tank_type">Profile</Label>
+            <select
+              key={waterType}
+              id="tank_type"
+              name="tank_type"
+              defaultValue={
+                tank?.water_type === waterType
+                  ? tank.tank_type === "fowlr" && waterType === "freshwater"
+                    ? "community"
+                    : tank.tank_type
+                  : defaultTankType(waterType)
+              }
+              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+            >
+              {profilesForWater(waterType).map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Sets bioload headroom
+              {waterType === "saltwater" ? " and reef-safe livestock checks" : ""}.
+            </p>
+          </div>
 
           <div className="space-y-3 rounded-xl border border-primary/10 bg-muted/20 p-3 sm:col-span-2">
             <div className="space-y-1">

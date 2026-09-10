@@ -275,7 +275,7 @@ function OtherParams({ tankId, waterType }: { tankId: string; waterType: WaterTy
                   ? "35"
                   : parameter === "alkalinity"
                     ? "5"
-                    : system === "metric"
+                    : system.temp === "C"
                       ? "26"
                       : "78"
               }
@@ -286,10 +286,10 @@ function OtherParams({ tankId, waterType }: { tankId: string; waterType: WaterTy
                 : parameter === "alkalinity"
                   ? "KH / carbonate hardness — many community tanks sit around 3–8 dKH."
                   : waterType === "freshwater"
-                    ? system === "metric"
+                    ? system.temp === "C"
                       ? "Most tropical community tanks do best around 24–28°C."
                       : "Most tropical community tanks do best around 72–82°F."
-                    : system === "metric"
+                    : system.temp === "C"
                       ? "Most reefs do best around 24–27°C."
                       : "Most reefs do best around 76–80°F."}
             </p>

@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import Link from "next/link"
 
-export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+export function AuthForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [message, setMessage] = useState<string | null>(null)
@@ -19,15 +18,6 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setMessage(null)
     try {
       const supabase = createClient()
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password })
-        if (error) {
-          setMessage(error.message)
-          return
-        }
-        setMessage("Account created. If email confirmation is on, check your inbox, then sign in.")
-        return
-      }
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         setMessage(error.message)
@@ -46,9 +36,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   return (
     <Card className="mx-auto w-full max-w-md border-primary/20">
       <CardHeader>
-        <CardTitle>{mode === "login" ? "Sign in" : "Create an account"}</CardTitle>
+        <CardTitle>Sign in</CardTitle>
         <CardDescription>
-          Tank Tracker keeps tests, livestock, and reminders in sync on your phone and computer.
+          Invite-only access. Use the email and password from your Tank Tracker account.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -78,7 +68,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
               id="password"
               name="password"
               type="password"
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              autoComplete="current-password"
               required
               minLength={6}
               value={password}
@@ -92,16 +82,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             disabled={pending}
             onClick={() => void handleAuth()}
           >
-            {pending ? "Working…" : mode === "login" ? "Sign in" : "Sign up"}
+            {pending ? "Working…" : "Sign in"}
           </Button>
         </form>
-        <p className="mt-4 text-sm text-muted-foreground">
-          {mode === "login" ? (
-            <>Need an account? <Link className="underline" href="/signup">Sign up</Link></>
-          ) : (
-            <>Already have one? <Link className="underline" href="/login">Sign in</Link></>
-          )}
-        </p>
       </CardContent>
     </Card>
   )

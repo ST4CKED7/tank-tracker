@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import type { Database } from "@/lib/database.types"
 import { assertSupabaseEnv, supabaseCookieOptions } from "@/lib/supabase/env"
 
-const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/sw.js", "/manifest.webmanifest"]
+const PUBLIC_PATHS = ["/login", "/auth", "/sw.js", "/manifest.webmanifest"]
 
 export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname
@@ -13,6 +13,12 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/icons/")
   ) {
     return NextResponse.next()
+  }
+
+  if (path === "/signup" || path.startsWith("/signup/")) {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = "/login"
+    return NextResponse.redirect(redirectUrl)
   }
 
   let supabaseResponse = NextResponse.next({ request })
@@ -49,7 +55,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  if (user && (path === "/login" || path === "/signup")) {
+  if (user && path === "/login") {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = "/"
     return NextResponse.redirect(redirectUrl)

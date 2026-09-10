@@ -14,7 +14,7 @@ export default function LoginPage() {
         </span>
         Tank Tracker
       </div>
-      <AuthForm mode="login" />
+      <AuthForm />
     </div>
   )
 }

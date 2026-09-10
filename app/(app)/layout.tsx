@@ -19,6 +19,7 @@ export default async function AppGroupLayout({ children }: { children: ReactNode
           name: item.name,
           gallons: item.gallons,
           water_type: item.water_type,
+          icon: item.icon,
           lastTestAt: lastTestByTank[item.id] ?? null,
         }))}
         activeTankId={tank?.id ?? null}

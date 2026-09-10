@@ -1,25 +1,28 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  calculateSeachemDose,
-  seachemProductsFor,
-  type SeachemProduct,
+  calculateDose,
+  doseProductsFor,
+  type DoseProduct,
 } from "@/lib/seachem"
-import { formatVolume, type UnitPrefs } from "@/lib/units"
+import { displayVolume, formatVolume, toStoredVolume, volumeLabel, type UnitPrefs } from "@/lib/units"
 
-export type SeachemPrefill = {
+export type DosePrefill = {
   product: string
   amount: number
   unit: string
   target_parameter: string
 }
 
-export function SeachemCalculator({
+/** @deprecated Use DosePrefill */
+export type SeachemPrefill = DosePrefill
+
+export function DoseCalculator({
   freshwater,
   systemGallons,
   prefs,
@@ -28,28 +31,53 @@ export function SeachemCalculator({
   freshwater: boolean
   systemGallons: number
   prefs: UnitPrefs
-  onApply: (prefill: SeachemPrefill) => void
+  onApply: (prefill: DosePrefill) => void
 }) {
   const products = useMemo(
-    () => seachemProductsFor(freshwater ? "freshwater" : "saltwater"),
+    () => doseProductsFor(freshwater ? "freshwater" : "saltwater"),
     [freshwater],
   )
+  const brands = useMemo(() => {
+    const seen: string[] = []
+    for (const item of products) {
+      if (!seen.includes(item.brand)) seen.push(item.brand)
+    }
+    return seen
+  }, [products])
+
   const [productId, setProductId] = useState(products[0]?.id ?? "prime")
   const product = products.find((item) => item.id === productId) ?? products[0]
   const [current, setCurrent] = useState("")
   const [target, setTarget] = useState("")
+  const [volumeInput, setVolumeInput] = useState(() =>
+    String(displayVolume(systemGallons, prefs, systemGallons >= 10 ? 0 : 1)),
+  )
+
+  useEffect(() => {
+    setVolumeInput(String(displayVolume(systemGallons, prefs, systemGallons >= 10 ? 0 : 1)))
+  }, [systemGallons, prefs])
+
+  useEffect(() => {
+    if (!products.some((item) => item.id === productId)) {
+      setProductId(products[0]?.id ?? "prime")
+      setCurrent("")
+      setTarget("")
+    }
+  }, [products, productId])
+
+  const gallons = toStoredVolume(Number(volumeInput), prefs.volume)
 
   const result = useMemo(() => {
-    if (!product) return null
-    return calculateSeachemDose({
+    if (!product || !(gallons > 0)) return null
+    return calculateDose({
       productId: product.id,
-      gallons: systemGallons,
+      gallons,
       current: current === "" ? undefined : Number(current),
       target: target === "" ? undefined : Number(target),
     })
-  }, [product, systemGallons, current, target])
+  }, [product, gallons, current, target])
 
-  function selectProduct(next: SeachemProduct) {
+  function selectProduct(next: DoseProduct) {
     setProductId(next.id)
     setCurrent("")
     setTarget("")
@@ -58,17 +86,33 @@ export function SeachemCalculator({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Seachem calculator</CardTitle>
+        <CardTitle>Dose calculator</CardTitle>
         <CardDescription>
-          Based on published Seachem rates for a {formatVolume(systemGallons, prefs)} system (display + sump).
-          Always confirm against the bottle label.
+          Prefills from your tank’s system volume ({formatVolume(systemGallons, prefs)}, display
+          {systemGallons > 0 ? " including sump when set" : ""}). Edit the field anytime — doses always use the volume you enter.
+          Confirm against the bottle label.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="space-y-1">
-          <Label htmlFor="seachem-product">Product</Label>
+          <Label htmlFor="dose-volume">Tank / system volume ({volumeLabel(prefs)})</Label>
+          <Input
+            id="dose-volume"
+            type="number"
+            min={0}
+            step="0.1"
+            value={volumeInput}
+            onChange={(event) => setVolumeInput(event.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Prefills from your active tank. Edit here for water-change buckets or a different system size.
+          </p>
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="dose-product">Product</Label>
           <select
-            id="seachem-product"
+            id="dose-product"
             className="h-10 w-full rounded-md border bg-background px-3 text-sm"
             value={product?.id}
             onChange={(event) => {
@@ -76,21 +120,31 @@ export function SeachemCalculator({
               if (next) selectProduct(next)
             }}
           >
-            {products.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
+            {brands.map((brand) => (
+              <optgroup key={brand} label={brand}>
+                {products
+                  .filter((item) => item.brand === brand)
+                  .map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+              </optgroup>
             ))}
           </select>
-          {product ? <p className="text-xs text-muted-foreground">{product.notes}</p> : null}
+          {product ? (
+            <p className="text-xs text-muted-foreground">
+              {product.brand} · {product.notes}
+            </p>
+          ) : null}
         </div>
 
         {product?.mode === "raise" ? (
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <Label htmlFor="seachem-current">Current ({product.raiseUnitLabel})</Label>
+              <Label htmlFor="dose-current">Current ({product.raiseUnitLabel})</Label>
               <Input
-                id="seachem-current"
+                id="dose-current"
                 type="number"
                 step="0.1"
                 value={current}
@@ -98,9 +152,9 @@ export function SeachemCalculator({
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="seachem-target">Target ({product.raiseUnitLabel})</Label>
+              <Label htmlFor="dose-target">Target ({product.raiseUnitLabel})</Label>
               <Input
-                id="seachem-target"
+                id="dose-target"
                 type="number"
                 step="0.1"
                 value={target}
@@ -126,7 +180,7 @@ export function SeachemCalculator({
               className="mt-3 min-h-11 w-full sm:w-auto"
               onClick={() =>
                 onApply({
-                  product: product!.name,
+                  product: `${product!.brand} ${product!.name}`,
                   amount: result.amount,
                   unit: result.unit,
                   target_parameter:
@@ -137,6 +191,8 @@ export function SeachemCalculator({
               Fill log form
             </Button>
           </div>
+        ) : !(gallons > 0) ? (
+          <p className="text-sm text-muted-foreground">Enter your tank volume to calculate a dose.</p>
         ) : product?.mode === "raise" ? (
           <p className="text-sm text-muted-foreground">Enter current and a higher target to calculate a dose.</p>
         ) : null}
@@ -144,3 +200,6 @@ export function SeachemCalculator({
     </Card>
   )
 }
+
+/** @deprecated Use DoseCalculator */
+export const SeachemCalculator = DoseCalculator

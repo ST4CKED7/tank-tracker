@@ -1,16 +1,50 @@
 "use client"
 
 import { addLivestock } from "@/lib/actions"
-import type { LivestockRow, Species, Tank } from "@/lib/bioload"
+import {
+  CORAL_SIZE_LABELS,
+  LIVESTOCK_SEX_LABELS,
+  type CoralSize,
+  type LivestockRow,
+  type LivestockSex,
+  type Species,
+  type Tank,
+} from "@/lib/bioload"
 import { assessCleanupCrew } from "@/lib/cleanup-crew"
 import { suggestCleanupCrew } from "@/lib/compatibility"
 import type { ParameterKey } from "@/lib/parameters"
 import { SpeciesImage } from "@/components/species-image"
 import { SubmitButton } from "@/components/submit-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useUnits } from "@/components/units-provider"
+import { displayLength, lengthLabel } from "@/lib/units"
 import { cn } from "@/lib/utils"
 import { useMemo } from "react"
+
+function SexSelect({
+  id,
+  defaultValue = "unknown",
+}: {
+  id: string
+  defaultValue?: LivestockSex
+}) {
+  return (
+    <select
+      id={id}
+      name="sex"
+      defaultValue={defaultValue}
+      className="h-8 rounded-md border bg-background px-2 text-sm"
+    >
+      {(Object.keys(LIVESTOCK_SEX_LABELS) as LivestockSex[]).map((sex) => (
+        <option key={sex} value={sex}>
+          {LIVESTOCK_SEX_LABELS[sex]}
+        </option>
+      ))}
+    </select>
+  )
+}
 
 export function CleanupCrewPanel({
   tank,
@@ -66,14 +100,13 @@ export function CleanupCrewPanel({
               <form
                 key={item.species.id}
                 action={addLivestock}
-                className="flex items-center justify-between gap-3 rounded-xl border border-primary/10 bg-background/40 p-2.5"
+                className="space-y-3 rounded-xl border border-primary/10 bg-background/40 p-3"
               >
                 <input type="hidden" name="tank_id" value={tank.id} />
                 <input type="hidden" name="species_id" value={item.species.id} />
                 <input type="hidden" name="volume_unit" value={prefs.volume} />
                 <input type="hidden" name="length_unit" value={prefs.length} />
                 <input type="hidden" name="temp_unit" value={prefs.temp} />
-                <input type="hidden" name="quantity" value={1} />
                 <div className="flex min-w-0 items-center gap-3">
                   <SpeciesImage
                     src={item.species.image_url}
@@ -88,9 +121,63 @@ export function CleanupCrewPanel({
                     <p className="truncate text-xs text-muted-foreground">{item.reasons[0]}</p>
                   </div>
                 </div>
-                <SubmitButton size="sm" variant="secondary" pendingLabel="Adding…">
-                  Add
-                </SubmitButton>
+                <div className="flex flex-wrap items-end gap-2">
+                  <div>
+                    <Label htmlFor={`cuc-qty-${item.species.id}`}>Qty</Label>
+                    <Input
+                      id={`cuc-qty-${item.species.id}`}
+                      name="quantity"
+                      type="number"
+                      min={1}
+                      defaultValue={1}
+                      className="w-20"
+                    />
+                  </div>
+                  {item.species.kind === "fish" || item.species.kind === "invert" ? (
+                    <div>
+                      <Label htmlFor={`cuc-sex-${item.species.id}`}>Sex</Label>
+                      <SexSelect id={`cuc-sex-${item.species.id}`} defaultValue="unknown" />
+                    </div>
+                  ) : null}
+                  {item.species.kind === "fish" ? (
+                    <div>
+                      <Label htmlFor={`cuc-len-${item.species.id}`}>Size ({lengthLabel(prefs)})</Label>
+                      <Input
+                        id={`cuc-len-${item.species.id}`}
+                        name="current_length"
+                        type="number"
+                        step="0.1"
+                        min={0}
+                        className="w-28"
+                        defaultValue={
+                          item.species.adult_length_inches != null
+                            ? displayLength(Number(item.species.adult_length_inches), prefs)
+                            : undefined
+                        }
+                      />
+                    </div>
+                  ) : null}
+                  {item.species.kind === "coral" ? (
+                    <div>
+                      <Label htmlFor={`cuc-coral-${item.species.id}`}>Size</Label>
+                      <select
+                        id={`cuc-coral-${item.species.id}`}
+                        name="coral_size"
+                        defaultValue="frag"
+                        className="h-8 rounded-md border bg-background px-2 text-sm"
+                      >
+                        {(Object.keys(CORAL_SIZE_LABELS) as CoralSize[]).map((size) => (
+                          <option key={size} value={size}>
+                            {CORAL_SIZE_LABELS[size]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+                  <SubmitButton size="sm" variant="secondary" pendingLabel="Adding…" successMessage="Added to tank">
+                    Add
+                  </SubmitButton>
+                </div>
               </form>
             ))}
           </div>

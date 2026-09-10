@@ -160,7 +160,9 @@ export function LivestockManager({
                         ) : null}
                       </div>
                       <div className="text-sm text-muted-foreground">{item.species.scientific_name}</div>
-                      {item.nickname ? <div className="text-sm">{item.nickname}</div> : null}
+                      {item.nickname ? (
+                        <div className="text-sm text-muted-foreground">Name: {item.nickname}</div>
+                      ) : null}
                       {item.species.kind === "fish" && lengthInches ? (
                         <div className="text-sm text-muted-foreground">
                           Current size {formatLength(lengthInches, prefs)}
@@ -188,6 +190,18 @@ export function LivestockManager({
                   <form action={updateLivestock} className="flex flex-wrap items-end gap-2 border-t border-primary/10 pt-3">
                     <input type="hidden" name="id" value={item.id} />
                     {unitFields}
+                    <div className="space-y-1">
+                      <Label htmlFor={`name-${item.id}`}>
+                        {item.species.kind === "fish" ? "Fish name" : "Name"}
+                      </Label>
+                      <Input
+                        id={`name-${item.id}`}
+                        name="nickname"
+                        defaultValue={item.nickname ?? ""}
+                        placeholder="Optional"
+                        className="w-36"
+                      />
+                    </div>
                     {item.species.kind === "fish" ? (
                       <div className="space-y-1">
                         <Label htmlFor={`len-${item.id}`}>Length ({lengthLabel(prefs)})</Label>
@@ -267,56 +281,92 @@ export function LivestockManager({
               <input type="hidden" name="tank_id" value={tank.id} />
               <input type="hidden" name="species_id" value={item.species.id} />
               {unitFields}
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex min-w-0 items-start gap-3">
-                  <SpeciesImage
-                    src={item.species.image_url}
-                    alt={item.species.common_name}
-                    speciesId={item.species.id}
-                    commonName={item.species.common_name}
-                    scientificName={item.species.scientific_name}
-                    size="sm"
-                  />
-                  <div className="min-w-0">
-                    <div className="font-medium">{item.species.common_name}</div>
-                    <p className="text-sm text-muted-foreground">{item.reasons[0]}</p>
-                    {item.projectedBioloadPercent != null ? (
-                      <p className="text-xs text-muted-foreground">Would put bioload at {Math.round(item.projectedBioloadPercent)}%</p>
-                    ) : null}
-                  </div>
+              <div className="flex min-w-0 items-start gap-3">
+                <SpeciesImage
+                  src={item.species.image_url}
+                  alt={item.species.common_name}
+                  speciesId={item.species.id}
+                  commonName={item.species.common_name}
+                  scientificName={item.species.scientific_name}
+                  size="sm"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium">{item.species.common_name}</div>
+                  <p className="text-sm text-muted-foreground">{item.reasons[0]}</p>
+                  {item.projectedBioloadPercent != null ? (
+                    <p className="text-xs text-muted-foreground">
+                      Would put bioload at {Math.round(item.projectedBioloadPercent)}%
+                    </p>
+                  ) : null}
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  {item.species.kind === "coral" ? (
-                    <select name="coral_size" defaultValue="frag" className="h-8 rounded-md border bg-background px-2 text-xs">
-                      {(Object.keys(CORAL_SIZE_LABELS) as CoralSize[]).map((size) => (
-                        <option key={size} value={size}>
-                          {CORAL_SIZE_LABELS[size]}
-                        </option>
-                      ))}
-                    </select>
-                  ) : null}
-                  {item.species.kind === "fish" || item.species.kind === "invert" ? (
-                    <SexSelect defaultValue="unknown" className="text-xs" />
-                  ) : null}
-                  {item.species.kind === "fish" ? (
+              </div>
+              <div className="mt-3 flex flex-wrap items-end gap-2">
+                <div>
+                  <Label htmlFor={`sug-name-${item.species.id}`}>
+                    {item.species.kind === "fish" ? "Fish name" : "Name"}
+                  </Label>
+                  <Input
+                    id={`sug-name-${item.species.id}`}
+                    name="nickname"
+                    placeholder="Optional"
+                    className="w-36"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`sug-qty-${item.species.id}`}>Qty</Label>
+                  <Input
+                    id={`sug-qty-${item.species.id}`}
+                    name="quantity"
+                    type="number"
+                    min={1}
+                    defaultValue={1}
+                    className="w-20"
+                  />
+                </div>
+                {item.species.kind === "fish" || item.species.kind === "invert" ? (
+                  <div>
+                    <Label htmlFor={`sug-sex-${item.species.id}`}>Sex</Label>
+                    <SexSelect id={`sug-sex-${item.species.id}`} defaultValue="unknown" />
+                  </div>
+                ) : null}
+                {item.species.kind === "fish" ? (
+                  <div>
+                    <Label htmlFor={`sug-len-${item.species.id}`}>Size ({lengthLabel(prefs)})</Label>
                     <Input
+                      id={`sug-len-${item.species.id}`}
                       name="current_length"
                       type="number"
                       step="0.1"
                       min={0}
-                      className="w-24"
-                      placeholder={`${lengthLabel(prefs)}`}
+                      className="w-28"
                       defaultValue={
                         item.species.adult_length_inches != null
                           ? displayLength(Number(item.species.adult_length_inches), prefs)
                           : undefined
                       }
                     />
-                  ) : null}
-                  <SubmitButton size="sm" pendingLabel="Adding…" successMessage="Added to tank">
-                    Add
-                  </SubmitButton>
-                </div>
+                  </div>
+                ) : null}
+                {item.species.kind === "coral" ? (
+                  <div>
+                    <Label htmlFor={`sug-coral-${item.species.id}`}>Size</Label>
+                    <select
+                      id={`sug-coral-${item.species.id}`}
+                      name="coral_size"
+                      defaultValue="frag"
+                      className="h-8 rounded-md border bg-background px-2 text-sm"
+                    >
+                      {(Object.keys(CORAL_SIZE_LABELS) as CoralSize[]).map((size) => (
+                        <option key={size} value={size}>
+                          {CORAL_SIZE_LABELS[size]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+                <SubmitButton size="sm" pendingLabel="Adding…" successMessage="Added to tank">
+                  Add
+                </SubmitButton>
               </div>
             </form>
           ))}
@@ -389,6 +439,17 @@ export function LivestockManager({
                   </div>
                 </div>
                 <div className="mt-2 flex flex-wrap items-end gap-2">
+                  <div>
+                    <Label htmlFor={`name-${species.id}`}>
+                      {species.kind === "fish" ? "Fish name" : "Name"}
+                    </Label>
+                    <Input
+                      id={`name-${species.id}`}
+                      name="nickname"
+                      placeholder="Optional"
+                      className="w-36"
+                    />
+                  </div>
                   <div>
                     <Label htmlFor={`qty-${species.id}`}>Qty</Label>
                     <Input id={`qty-${species.id}`} name="quantity" type="number" min={1} defaultValue={1} className="w-20" />

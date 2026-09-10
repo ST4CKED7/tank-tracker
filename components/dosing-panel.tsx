@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/empty-state"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { SeachemCalculator, type SeachemPrefill } from "@/components/seachem-calculator"
+import { DoseCalculator, type DosePrefill } from "@/components/seachem-calculator"
 import { useUnits } from "@/components/units-provider"
 import { format, parseISO } from "date-fns"
 import { Droplets } from "lucide-react"
@@ -31,7 +31,7 @@ export function DosingPanel({
   const [unit, setUnit] = useState("ml")
   const [target, setTarget] = useState(freshwater ? "alkalinity" : "alkalinity")
 
-  function applyPrefill(prefill: SeachemPrefill) {
+  function applyPrefill(prefill: DosePrefill) {
     setProduct(prefill.product)
     setAmount(String(prefill.amount))
     setUnit(prefill.unit)
@@ -40,7 +40,7 @@ export function DosingPanel({
 
   return (
     <div className="space-y-6">
-      <SeachemCalculator
+      <DoseCalculator
         freshwater={freshwater}
         systemGallons={systemGallons}
         prefs={prefs}
@@ -130,7 +130,7 @@ export function DosingPanel({
               <EmptyState
                 icon={<Droplets className="size-6" />}
                 title="No doses logged yet"
-                description="Save a Seachem (or other) dose after you treat the water — history builds a quiet trail next to your test charts."
+                description="Save a calculated (or other) dose after you treat the water — history builds a quiet trail next to your test charts."
                 className="py-6 shadow-none"
               />
             ) : null}

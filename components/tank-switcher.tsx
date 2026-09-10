@@ -6,10 +6,12 @@ import type { Tank } from "@/lib/bioload"
 import { formatLastTestAge } from "@/lib/anomalies"
 import { formatVolume } from "@/lib/units"
 import { useUnits } from "@/components/units-provider"
+import { TankIconBadge } from "@/components/tank-icon"
 import { cn } from "@/lib/utils"
-import { ChevronDown, Fish, Waves } from "lucide-react"
+import { ChevronDown } from "lucide-react"
 
 export type SwitcherTank = Pick<Tank, "id" | "name" | "gallons" | "water_type"> & {
+  icon?: string | null
   lastTestAt?: string | null
 }
 
@@ -73,14 +75,7 @@ export function TankSwitcher({
           pending && "opacity-70",
         )}
       >
-        <span
-          className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded-xl text-primary-foreground",
-            active.water_type === "freshwater" ? "bg-emerald-600" : "bg-primary",
-          )}
-        >
-          {active.water_type === "freshwater" ? <Fish className="size-3.5" /> : <Waves className="size-3.5" />}
-        </span>
+        <TankIconBadge icon={active.icon} waterType={active.water_type} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium leading-tight">{active.name}</span>
           <span className="block truncate text-[11px] text-muted-foreground">
@@ -109,14 +104,7 @@ export function TankSwitcher({
                     selected ? "bg-primary/15" : "hover:bg-muted/70",
                   )}
                 >
-                  <span
-                    className={cn(
-                      "flex size-8 shrink-0 items-center justify-center rounded-xl text-primary-foreground",
-                      tank.water_type === "freshwater" ? "bg-emerald-600" : "bg-primary",
-                    )}
-                  >
-                    {tank.water_type === "freshwater" ? <Fish className="size-3.5" /> : <Waves className="size-3.5" />}
-                  </span>
+                  <TankIconBadge icon={tank.icon} waterType={tank.water_type} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{tank.name}</span>
                     <span className="block truncate text-[11px] text-muted-foreground">

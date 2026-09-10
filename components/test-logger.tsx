@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useUnits } from "@/components/units-provider"
-import { Check, Star } from "lucide-react"
+import { Star } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 function useCountdown(seconds: number | undefined, active: boolean) {
@@ -128,52 +128,48 @@ export function TestLogger({
                   const selected = kit === item.id
                   const isDefault = savedDefault === item.id
                   return (
-                    <button
+                    <div
                       key={item.id}
-                      type="button"
-                      onClick={() => setKit(item.id)}
                       className={cn(
-                        "min-h-11 w-full rounded-xl border px-3 py-2.5 text-left text-sm transition-colors",
+                        "flex min-h-11 w-full items-stretch gap-1 rounded-xl border transition-colors",
                         selected ? "border-primary bg-primary/10 shadow-sm" : "hover:bg-muted/60",
                       )}
                     >
-                      <div className="flex items-start justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setKit(item.id)}
+                        className="min-w-0 flex-1 px-3 py-2.5 text-left text-sm"
+                      >
                         <div className="font-medium leading-snug">{item.shortLabel}</div>
-                        {isDefault ? (
-                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-background/80 px-1.5 py-0.5 text-[10px] font-medium text-primary ring-1 ring-primary/20">
-                            <Star className="size-2.5 fill-current" />
-                            Default
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="mt-0.5 text-xs text-muted-foreground">{item.blurb}</div>
-                      <div className="mt-1 text-[11px] text-muted-foreground/90">{item.tests.join(" · ")}</div>
-                    </button>
+                        <div className="mt-0.5 text-xs text-muted-foreground">{item.blurb}</div>
+                        <div className="mt-1 text-[11px] text-muted-foreground/90">{item.tests.join(" · ")}</div>
+                      </button>
+                      <button
+                        type="button"
+                        title={isDefault ? "Default kit" : "Set as default kit"}
+                        aria-label={isDefault ? `${item.shortLabel} is your default` : `Set ${item.shortLabel} as default`}
+                        aria-pressed={isDefault}
+                        disabled={pendingDefault}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          if (!isDefault) saveDefault(item.id)
+                        }}
+                        className={cn(
+                          "flex w-11 shrink-0 items-center justify-center rounded-r-[0.7rem] border-l border-transparent transition-colors",
+                          isDefault
+                            ? "text-amber-500"
+                            : "text-muted-foreground hover:bg-background/70 hover:text-amber-500",
+                          pendingDefault && "opacity-60",
+                        )}
+                      >
+                        <Star className={cn("size-4", isDefault && "fill-current")} />
+                      </button>
+                    </div>
                   )
                 })}
               </div>
             </div>
           ))}
-
-          <Button
-            type="button"
-            variant="secondary"
-            className="min-h-11 w-full"
-            disabled={pendingDefault || savedDefault === kit}
-            onClick={() => saveDefault(kit)}
-          >
-            {savedDefault === kit ? (
-              <>
-                <Check className="size-4" />
-                Default kit
-              </>
-            ) : (
-              <>
-                <Star className="size-4" />
-                {pendingDefault ? "Saving…" : "Set as my default"}
-              </>
-            )}
-          </Button>
         </CardContent>
       </Card>
 

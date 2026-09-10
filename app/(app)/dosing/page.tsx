@@ -23,8 +23,8 @@ export default async function DosingPage() {
         title="Dosing"
         description={
           fw
-            ? "Seachem calculator for Prime, buffers, Flourish — then log what you add."
-            : "Seachem calculator for Reef Buffer, calcium, mag — then log what you add."
+            ? "Dose calculator for Prime, ferts, conditioners, and more — using your tank volume — then log what you add."
+            : "Dose calculator for reef two-part, buffers, and conditioners — using your tank volume — then log what you add."
         }
       />
       <DosingPanel

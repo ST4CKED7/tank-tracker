@@ -104,3 +104,9 @@ export function parseTankTheme(value: unknown): TankThemeId {
 export function tankThemeMeta(value: unknown): TankThemeMeta {
   return TANK_THEMES[parseTankTheme(value)]
 }
+
+/** Inline boot script for layouts — avoids a flash of the wrong theme. */
+export function tankThemeBootScript(theme?: string | null) {
+  const id = parseTankTheme(theme)
+  return `document.documentElement.setAttribute("data-theme",${JSON.stringify(id)});`
+}

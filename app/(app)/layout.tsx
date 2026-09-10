@@ -1,8 +1,9 @@
 import type { ReactNode } from "react"
 import { AppNav } from "@/components/app-nav"
-import { TankThemeSync, tankThemeBootScript } from "@/components/tank-theme-sync"
+import { TankThemeSync } from "@/components/tank-theme-sync"
 import { UnitsProvider } from "@/components/units-provider"
 import { getActiveTankContext, getTankLastTestMap } from "@/lib/queries"
+import { parseTankTheme } from "@/lib/tank-themes"
 import { unitPrefsFromTank } from "@/lib/units"
 
 export default async function AppGroupLayout({ children }: { children: ReactNode }) {
@@ -11,11 +12,10 @@ export default async function AppGroupLayout({ children }: { children: ReactNode
     getTankLastTestMap(),
   ])
   const prefs = unitPrefsFromTank(tank)
-  const colorTheme = tank?.color_theme ?? "ocean"
+  const colorTheme = parseTankTheme(tank?.color_theme)
 
   return (
     <UnitsProvider prefs={prefs}>
-      <script dangerouslySetInnerHTML={{ __html: tankThemeBootScript(colorTheme) }} />
       <TankThemeSync theme={colorTheme} />
       <AppNav
         tanks={tanks.map((item) => ({

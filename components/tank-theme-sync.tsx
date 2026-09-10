@@ -13,9 +13,3 @@ export function TankThemeSync({ theme }: { theme?: string | null }) {
 
   return null
 }
-
-/** Inline boot script for server layouts — avoids a flash of the wrong theme. */
-export function tankThemeBootScript(theme?: string | null) {
-  const id = parseTankTheme(theme)
-  return `document.documentElement.setAttribute("data-theme",${JSON.stringify(id)});`
-}

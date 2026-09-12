@@ -14,6 +14,8 @@ import { isKitId, normalizeFavoriteKits, toggleFavoriteKitList, DEFAULT_FAVORITE
 import { parseLivestockSex, type LivestockSex } from "@/lib/bioload"
 import { parseTankIcon, parseTankIconColor } from "@/lib/tank-icons"
 import { parseTankTheme } from "@/lib/tank-themes"
+import { dashboardParameterKeys } from "@/lib/parameters"
+import { parseParameterTargets, toStoredTargetRange } from "@/lib/parameter-targets"
 
 async function tankPrefs(supabase: Awaited<ReturnType<typeof createClient>>, tankId: string): Promise<UnitPrefs> {
   const { data } = await supabase
@@ -211,6 +213,54 @@ export async function updateUnitPrefs(formData: FormData) {
     .eq("user_id", userId)
   if (error) throw error
   revalidateTankShell()
+}
+
+export async function updateParameterTargets(formData: FormData) {
+  const { supabase, userId } = await requireUser()
+  const tankId = String(formData.get("tank_id") || "")
+  if (!tankId) return
+
+  const prefs = await tankPrefs(supabase, tankId)
+  const { data: tank } = await supabase
+    .from("tanks")
+    .select("water_type")
+    .eq("id", tankId)
+    .eq("user_id", userId)
+    .maybeSingle()
+  if (!tank) return
+
+  const waterType = tank.water_type === "freshwater" ? "freshwater" : "saltwater"
+  const reset = String(formData.get("reset") || "") === "1"
+
+  if (reset) {
+    const { error } = await supabase
+      .from("tanks")
+      .update({ parameter_targets: {} })
+      .eq("id", tankId)
+      .eq("user_id", userId)
+    if (error) throw error
+    revalidateAppPaths("/", "/tests", "/charts", "/dosing")
+    return
+  }
+
+  const next: Record<string, { min: number; max: number }> = {}
+  for (const key of dashboardParameterKeys(waterType)) {
+    const minRaw = formData.get(`${key}_min`)
+    const maxRaw = formData.get(`${key}_max`)
+    if (minRaw == null || maxRaw == null || String(minRaw) === "" || String(maxRaw) === "") continue
+    const minDisplay = Number(minRaw)
+    const maxDisplay = Number(maxRaw)
+    if (!Number.isFinite(minDisplay) || !Number.isFinite(maxDisplay)) continue
+    next[key] = toStoredTargetRange(key, minDisplay, maxDisplay, prefs)
+  }
+
+  const { error } = await supabase
+    .from("tanks")
+    .update({ parameter_targets: parseParameterTargets(next) })
+    .eq("id", tankId)
+    .eq("user_id", userId)
+  if (error) throw error
+  revalidateAppPaths("/", "/tests", "/charts", "/dosing")
 }
 
 export async function logTest(formData: FormData) {

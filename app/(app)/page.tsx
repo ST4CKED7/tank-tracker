@@ -6,24 +6,19 @@ import { HomeCleanupCrew } from "@/components/home-cleanup-crew"
 import { PageHero } from "@/components/page-hero"
 import { PullToRefresh } from "@/components/pull-to-refresh"
 import { NotificationsPanel } from "@/components/notifications-panel"
+import { ParameterTargetsPanel } from "@/components/parameter-targets-panel"
 import { RemindersPanel } from "@/components/reminders-panel"
 import { TankForm } from "@/components/tank-form"
 import { TestAdvicePanel } from "@/components/test-advice-panel"
 import { TodayStrip } from "@/components/today-strip"
 import { detectAnomalies } from "@/lib/anomalies"
 import { nitrateRisingDespiteChanges } from "@/lib/bioload"
-import { intersectRanges } from "@/lib/compatibility"
 import {
-  dashboardParameterKeys,
-  displayRange,
   isFreshwater,
-  parameterMeta,
-  waterTypeLabel,
 } from "@/lib/parameters"
 import { getDashboardData } from "@/lib/queries"
 import { buildReminders } from "@/lib/reminders"
-import { buildTestAdvice } from "@/lib/test-advice"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { buildTestAdvice, getWaterChangeSuggestion } from "@/lib/test-advice"
 import { sumpMediaLabel } from "@/lib/sump-media"
 import { formatVolume, unitPrefsFromTank } from "@/lib/units"
 import { displayTankType } from "@/lib/tank-profiles"
@@ -48,7 +43,6 @@ export default async function HomePage() {
     )
   }
 
-  const ranges = intersectRanges(data.livestock)
   const reminders = buildReminders({
     tank: data.tank,
     lastWaterChange: data.waterChanges[0]?.changed_at,
@@ -63,7 +57,6 @@ export default async function HomePage() {
   const prefs = unitPrefsFromTank(data.tank)
   const waterType = data.tank.water_type === "freshwater" ? "freshwater" : "saltwater"
   const fw = isFreshwater(waterType)
-  const meta = parameterMeta(prefs, waterType)
   const typeLabel = displayTankType(data.tank)
   const mediaLabels = (data.tank.sump_media ?? []).map(sumpMediaLabel)
   const mediaBit =
@@ -89,6 +82,12 @@ export default async function HomePage() {
     waterChanges: data.waterChanges.map((change) => ({ changed_at: change.changed_at })),
     prefs,
   })
+  const changeSuggestion = getWaterChangeSuggestion({
+    tank: data.tank,
+    latest: data.latest,
+    livestock: data.livestock,
+    prefs,
+  })
   const outOfRange = advice.filter(
     (item) => item.severity === "urgent" || item.severity === "action" || item.severity === "watch",
   )
@@ -97,7 +96,13 @@ export default async function HomePage() {
   const anomalies = detectAnomalies(testPoints, prefs, waterType)
 
   const primary =
-    overdue[0]?.kind === "water_change"
+    changeSuggestion
+      ? {
+          label: `Do ~${changeSuggestion.percent}% change`,
+          href: "/#reminders",
+          detail: changeSuggestion.summary,
+        }
+      : overdue[0]?.kind === "water_change"
       ? {
           label: "Log water change",
           href: "/#reminders",
@@ -200,7 +205,11 @@ export default async function HomePage() {
           <div className="space-y-6">
             <BioloadGauge tank={data.tank} livestock={data.livestock} nitrateWarning={nitrateWarning} />
             <div id="reminders">
-              <RemindersPanel tank={data.tank} />
+              <RemindersPanel
+                tank={data.tank}
+                suggestedPercent={changeSuggestion?.percent ?? null}
+                suggestionDetail={changeSuggestion?.detail ?? null}
+              />
             </div>
           </div>
           <Suspense
@@ -216,34 +225,7 @@ export default async function HomePage() {
             <HomeCleanupCrew tank={data.tank} livestock={data.livestock} latest={data.latest} />
           </Suspense>
         </div>
-        <Card className="tt-fade-up">
-          <CardHeader>
-            <CardTitle>Recommended parameter window</CardTitle>
-          </CardHeader>
-          <CardContent className="tt-stagger grid gap-2 sm:grid-cols-2">
-            {dashboardParameterKeys(waterType).map((key) => {
-              const range = ranges[key] ?? meta[key].establishedTarget
-              if (!range) return null
-              const shown = displayRange(key, range, prefs)
-              return (
-                <div key={key} className="rounded-xl border border-primary/10 bg-background/40 px-3 py-2 text-sm">
-                  <span className="font-medium">{meta[key].label}</span>
-                  <span className="text-muted-foreground">
-                    {" "}
-                    {shown.min}–{shown.max} {meta[key].unit}
-                  </span>
-                  {ranges[key] ? (
-                    <div className="text-xs text-muted-foreground">Based on livestock targets</div>
-                  ) : (
-                    <div className="text-xs text-muted-foreground">
-                      Typical {waterTypeLabel(waterType)} default
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </CardContent>
-        </Card>
+        <ParameterTargetsPanel tank={data.tank} livestock={data.livestock} />
       </div>
     </PullToRefresh>
   )

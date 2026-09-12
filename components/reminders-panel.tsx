@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { logWaterChange } from "@/lib/actions"
 import { waterChangeGallons } from "@/lib/reminders"
 import { saltMixForGallons } from "@/lib/salt-mix"
@@ -14,23 +14,44 @@ import { displayVolume, formatVolume, volumeLabel } from "@/lib/units"
 
 export function RemindersPanel({
   tank,
+  suggestedPercent = null,
+  suggestionDetail = null,
 }: {
   tank: Tank
+  suggestedPercent?: number | null
+  suggestionDetail?: string | null
 }) {
   const system = useUnits()
   const fw = tank.water_type === "freshwater"
-  const [percent, setPercent] = useState(Number(tank.water_change_percent) || 15)
+  const defaultPercent = Number(tank.water_change_percent) || 15
+  const [percent, setPercent] = useState(suggestedPercent ?? defaultPercent)
   const mixGallons = useMemo(() => waterChangeGallons(tank, percent), [tank, percent])
   const salt = useMemo(() => saltMixForGallons(mixGallons), [mixGallons])
   const mixedDisplay = displayVolume(mixGallons, system)
+
+  useEffect(() => {
+    if (suggestedPercent != null && suggestedPercent > 0) {
+      setPercent(suggestedPercent)
+    }
+  }, [suggestedPercent])
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Water change</CardTitle>
-        <CardDescription>Mix volume and log a change when you&apos;re ready.</CardDescription>
+        <CardDescription>
+          {suggestedPercent
+            ? `Chemistry suggests ~${suggestedPercent}% — adjust if you prefer a gentler change.`
+            : "Mix volume and log a change when you’re ready."}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {suggestionDetail ? (
+          <p className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-3 text-sm text-amber-950 dark:text-amber-50">
+            {suggestionDetail}
+          </p>
+        ) : null}
+
         <div className="space-y-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
           <div className="font-medium">Water change calculator</div>
           <div className="grid gap-3 sm:grid-cols-2">

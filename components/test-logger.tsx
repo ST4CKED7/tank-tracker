@@ -337,8 +337,6 @@ export function TestLogger({
 
 function GuideSteps({ guide }: { guide: TestGuide }) {
   const { startTimer } = useTestTimers()
-  const shakeLabel = `Shake · ${guide.title}`
-  const waitLabel = `Wait · ${guide.title}`
 
   return (
     <div className="space-y-3">
@@ -354,8 +352,25 @@ function GuideSteps({ guide }: { guide: TestGuide }) {
           ))}
         </ul>
       ) : null}
-      {guide.waitSeconds || guide.shakeSeconds ? (
+      {guide.waitSeconds || guide.shakeSeconds || guide.bottleShakeSeconds ? (
         <div className="flex flex-wrap items-center gap-2">
+          {guide.bottleShakeSeconds ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                startTimer({
+                  kind: "bottle_shake",
+                  testName: guide.title,
+                  kitLabel: guide.kitLabel,
+                  durationSeconds: guide.bottleShakeSeconds!,
+                })
+              }
+            >
+              Start {guide.title} bottle #2 shake ({formatTimerClock(guide.bottleShakeSeconds)})
+            </Button>
+          ) : null}
           {guide.shakeSeconds ? (
             <Button
               type="button"
@@ -364,12 +379,14 @@ function GuideSteps({ guide }: { guide: TestGuide }) {
               onClick={() =>
                 startTimer({
                   kind: "shake",
-                  label: `${guide.kitLabel} · ${shakeLabel}`,
+                  testName: guide.title,
+                  kitLabel: guide.kitLabel,
                   durationSeconds: guide.shakeSeconds!,
                 })
               }
             >
-              Start shake ({formatTimerClock(guide.shakeSeconds)})
+              Start {guide.title} {guide.bottleShakeSeconds ? "tube shake" : "shake"} (
+              {formatTimerClock(guide.shakeSeconds)})
             </Button>
           ) : null}
           {guide.waitSeconds ? (
@@ -380,12 +397,13 @@ function GuideSteps({ guide }: { guide: TestGuide }) {
               onClick={() =>
                 startTimer({
                   kind: "wait",
-                  label: `${guide.kitLabel} · ${waitLabel}`,
+                  testName: guide.title,
+                  kitLabel: guide.kitLabel,
                   durationSeconds: guide.waitSeconds!,
                 })
               }
             >
-              Start wait ({formatTimerClock(guide.waitSeconds)})
+              Start {guide.title} wait ({formatTimerClock(guide.waitSeconds)})
             </Button>
           ) : null}
         </div>

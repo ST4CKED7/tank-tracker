@@ -249,6 +249,7 @@ export type Database = {
           icon: string
           icon_color: string
           color_theme: string
+          parameter_targets: Record<string, { min: number; max: number }>
         }
         Insert: {
           created_at?: string
@@ -273,6 +274,7 @@ export type Database = {
           icon?: string
           icon_color?: string
           color_theme?: string
+          parameter_targets?: Record<string, { min: number; max: number }>
         }
         Update: Partial<Database["public"]["Tables"]["tanks"]["Insert"]>
         Relationships: []

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import {
   formatTimerClock,
   remainingSeconds,
+  timerKindLabel,
   useTestTimers,
 } from "@/components/test-timer-provider"
 import { cn } from "@/lib/utils"
@@ -21,7 +22,7 @@ export function TestTimerBubbles() {
       {timers.map((timer) => {
         const left = remainingSeconds(timer, now)
         const done = left <= 0
-        const kindLabel = timer.kind === "shake" ? "Shake" : "Wait"
+        const kindLabel = timerKindLabel(timer.kind)
         return (
           <div
             key={timer.id}
@@ -42,10 +43,11 @@ export function TestTimerBubbles() {
                 {done ? <CheckCircle2 className="size-5" /> : <Timer className="size-5" />}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium">{timer.label}</div>
-                <div className="text-xs text-muted-foreground">
+                <div className="truncate text-sm font-medium">{timer.testName}</div>
+                <div className="truncate text-xs text-muted-foreground">
                   {kindLabel}
-                  {done ? " · finished" : ` · ${timer.durationSeconds}s total`}
+                  {timer.kitLabel ? ` · ${timer.kitLabel}` : ""}
+                  {done ? " · finished" : ""}
                 </div>
               </div>
               <div
@@ -62,7 +64,7 @@ export function TestTimerBubbles() {
               variant="ghost"
               size="icon"
               className="h-auto w-11 shrink-0 rounded-none border-l border-inherit"
-              aria-label={`Close ${timer.label} timer`}
+              aria-label={`Close ${timer.testName} ${kindLabel.toLowerCase()} timer`}
               onClick={() => dismissTimer(timer.id)}
             >
               <X className="size-4" />

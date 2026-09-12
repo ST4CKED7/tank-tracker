@@ -1,35 +1,52 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
+import Link from "next/link"
 import { logDose } from "@/lib/actions"
 import type { Tables } from "@/lib/database.types"
+import type { DoseSuggestion } from "@/lib/dose-suggest"
 import { SubmitButton } from "@/components/submit-button"
 import { EmptyState } from "@/components/empty-state"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import { DoseCalculator, type DosePrefill } from "@/components/seachem-calculator"
 import { useUnits } from "@/components/units-provider"
 import { format, parseISO } from "date-fns"
 import { Droplets } from "lucide-react"
 import { staggerStyle } from "@/lib/motion"
+import { cn } from "@/lib/utils"
 
 export function DosingPanel({
   tankId,
   doses,
   freshwater = false,
   systemGallons,
+  suggestions = [],
 }: {
   tankId: string
   doses: Tables<"dose_logs">[]
   freshwater?: boolean
   systemGallons: number
+  suggestions?: DoseSuggestion[]
 }) {
   const prefs = useUnits()
+  const searchParams = useSearchParams()
+  const initialProductId = searchParams.get("productId")
+  const initialCurrent = searchParams.get("current")
+  const initialTarget = searchParams.get("target")
+
   const [product, setProduct] = useState("")
   const [amount, setAmount] = useState("")
   const [unit, setUnit] = useState("ml")
   const [target, setTarget] = useState(freshwater ? "alkalinity" : "alkalinity")
+
+  const activeSuggestion = useMemo(() => {
+    if (!initialProductId) return suggestions[0] ?? null
+    return suggestions.find((item) => item.productId === initialProductId) ?? suggestions[0] ?? null
+  }, [suggestions, initialProductId])
 
   function applyPrefill(prefill: DosePrefill) {
     setProduct(prefill.product)
@@ -40,11 +57,51 @@ export function DosingPanel({
 
   return (
     <div className="space-y-6">
+      {suggestions.length > 0 ? (
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle>Suggested from your readings</CardTitle>
+            <CardDescription>
+              Based on latest tests and tank volume. Confirm the bottle label before you dose.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {suggestions.map((item) => (
+              <div
+                key={item.id}
+                className={cn(
+                  "rounded-xl border px-3 py-3",
+                  item.severity === "urgent" && "border-destructive/30 bg-destructive/5",
+                  item.severity === "action" && "border-sky-600/25 bg-sky-500/8",
+                  (item.severity === "watch" || item.severity === "info") &&
+                    "border-primary/15 bg-background/50",
+                )}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0 space-y-1">
+                    <div className="font-medium">{item.productName}</div>
+                    <p className="text-sm text-muted-foreground">{item.detail}</p>
+                  </div>
+                  <Button asChild size="sm" className="min-h-10 shrink-0">
+                    <Link href={item.href}>
+                      {item.amount} {item.unit}
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
+
       <DoseCalculator
         freshwater={freshwater}
         systemGallons={systemGallons}
         prefs={prefs}
         onApply={applyPrefill}
+        initialProductId={initialProductId ?? activeSuggestion?.productId}
+        initialCurrent={initialCurrent ?? (activeSuggestion?.current != null ? String(activeSuggestion.current) : null)}
+        initialTarget={initialTarget ?? (activeSuggestion?.target != null ? String(activeSuggestion.target) : null)}
       />
 
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">

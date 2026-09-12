@@ -24,7 +24,8 @@ function severityStyles(severity: AdviceSeverity) {
   }
 }
 
-function sourceLabel(source?: "livestock" | "typical" | "trend", freshwater?: boolean) {
+function sourceLabel(source?: "livestock" | "typical" | "trend" | "custom", freshwater?: boolean) {
+  if (source === "custom") return "Your custom targets"
   if (source === "livestock") return "Based on livestock targets"
   if (source === "typical") return freshwater ? "Typical freshwater default" : "Typical reef default"
   if (source === "trend") return "From recent trend"

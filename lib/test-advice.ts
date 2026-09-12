@@ -1,6 +1,5 @@
 import type { LivestockRow, Tank } from "@/lib/bioload"
 import { nitrateRisingDespiteChanges } from "@/lib/bioload"
-import { intersectRanges, type RangeMap } from "@/lib/compatibility"
 import {
   displayRange,
   isFreshwater,
@@ -10,6 +9,9 @@ import {
 } from "@/lib/parameters"
 import { waterChangeGallons } from "@/lib/reminders"
 import { displayParam, formatVolume, type UnitPrefs } from "@/lib/units"
+import { suggestDoses, type DoseSuggestion } from "@/lib/dose-suggest"
+import { resolveParameterTarget } from "@/lib/parameter-targets"
+import { suggestWaterChange, type WaterChangeSuggestion } from "@/lib/water-change-suggest"
 
 export type AdviceSeverity = "ok" | "info" | "watch" | "action" | "urgent"
 
@@ -26,8 +28,12 @@ export type TestAdvice = {
   detail: string
   actions: TestAdviceAction[]
   /** Where the target came from when relevant. */
-  source?: "livestock" | "typical" | "trend"
+  source?: "livestock" | "typical" | "trend" | "custom"
+  /** When set, Home can prefill the water-change calculator. */
+  suggestedChangePercent?: number
 }
+
+export type { WaterChangeSuggestion, DoseSuggestion }
 
 type TestPoint = { parameter: string; tested_at: string; value: number }
 type WaterChangePoint = { changed_at: string }
@@ -49,15 +55,13 @@ function severityRank(severity: AdviceSeverity) {
 
 function resolveTarget(
   key: ParameterKey,
-  ranges: RangeMap,
+  tank: Tank,
+  livestock: LivestockRow[],
   prefs: UnitPrefs,
-  waterType: WaterType,
-): { min: number; max: number; source: "livestock" | "typical" } | null {
-  const livestock = ranges[key]
-  if (livestock) return { min: livestock.min, max: livestock.max, source: "livestock" }
-  const established = parameterMeta(prefs, waterType)[key].establishedTarget
-  if (established) return { ...established, source: "typical" }
-  return null
+): { min: number; max: number; source: "livestock" | "typical" | "custom" } | null {
+  const resolved = resolveParameterTarget({ key, tank, livestock, prefs })
+  if (!resolved) return null
+  return { min: resolved.min, max: resolved.max, source: resolved.source }
 }
 
 function distanceOutside(value: number, min: number, max: number) {
@@ -89,11 +93,15 @@ function formatTarget(
   return `${shown.min}–${shown.max}${unit}`
 }
 
-function waterChangeAction(tank: Tank, prefs: UnitPrefs): TestAdviceAction {
-  const percent = Number(tank.water_change_percent) || 20
-  const gallons = waterChangeGallons(tank, percent)
+function waterChangeAction(
+  tank: Tank,
+  prefs: UnitPrefs,
+  suggestion?: WaterChangeSuggestion | null,
+): TestAdviceAction {
+  const percent = suggestion?.percent ?? (Number(tank.water_change_percent) || 20)
+  const gallons = suggestion?.gallons ?? waterChangeGallons(tank, percent)
   return {
-    label: `Log ~${percent}% change (${formatVolume(gallons, prefs)})`,
+    label: `Do ~${percent}% · ${formatVolume(gallons, prefs)}`,
     href: "/#reminders",
   }
 }
@@ -116,37 +124,100 @@ export function buildTestAdvice(input: {
 }): TestAdvice[] {
   const waterType: WaterType = isFreshwater(input.tank.water_type) ? "freshwater" : "saltwater"
   const fw = waterType === "freshwater"
-  const ranges = intersectRanges(input.livestock)
   const advice: TestAdvice[] = []
-  const wc = waterChangeAction(input.tank, input.prefs)
+  const changePlan = suggestWaterChange({
+    tank: input.tank,
+    latest: input.latest,
+    livestock: input.livestock,
+    prefs: input.prefs,
+  })
+  const dosePlans = suggestDoses({
+    tank: input.tank,
+    latest: input.latest,
+    livestock: input.livestock,
+    prefs: input.prefs,
+  })
+  const wc = waterChangeAction(input.tank, input.prefs, changePlan)
+  const doseById = (id: string) => dosePlans.find((item) => item.id === id)
+
+  const targetOf = (key: ParameterKey) =>
+    resolveTarget(key, input.tank, input.livestock, input.prefs)
+
+  if (changePlan) {
+    advice.push({
+      id: "water-change-plan",
+      parameter: changePlan.primary.parameter,
+      severity: changePlan.severity,
+      title: `Suggested water change · ~${changePlan.percent}%`,
+      detail: changePlan.detail,
+      actions: [wc, { label: "Open calculator", href: "/#reminders" }],
+      suggestedChangePercent: changePlan.percent,
+    })
+  }
+
+  for (const dose of dosePlans) {
+    const parameter: ParameterKey =
+      dose.parameter === "other" || dose.parameter === "magnesium" ? "alkalinity" : dose.parameter
+    advice.push({
+      id: dose.id,
+      parameter,
+      severity: dose.severity,
+      title: `Dose ${dose.productName}`,
+      detail: dose.detail,
+      actions: [
+        { label: `Use ${dose.amount} ${dose.unit}`, href: dose.href },
+        { label: "Open dosing", href: "/dosing" },
+      ],
+    })
+  }
 
   const ammonia = input.latest.ammonia
   const nitrite = input.latest.nitrite
 
   if (ammonia != null && ammonia > 0) {
+    const prime = doseById("dose-prime")
     advice.push({
       id: "ammonia",
       parameter: "ammonia",
       severity: ammonia >= 0.5 ? "urgent" : "action",
       title: "Ammonia detected — act now",
-      detail: `${formatReading("ammonia", ammonia, input.prefs, waterType)} is toxic. Do a water change, pause feeding, and watch the cycle. Aim for 0 ppm.`,
-      actions: [wc, { label: "Open cycle tracker", href: "/cycle" }],
+      detail: `${formatReading("ammonia", ammonia, input.prefs, waterType)} is toxic. Do a water change, pause feeding, and watch the cycle. Aim for 0 ppm.${
+        changePlan ? ` Plan: ~${changePlan.percent}% (${formatVolume(changePlan.gallons, input.prefs)}).` : ""
+      }${prime ? ` Detox: ~${prime.amount} ${prime.unit} ${prime.productName}.` : ""}`,
+      actions: [
+        wc,
+        prime
+          ? { label: `Dose ${prime.amount} ${prime.unit} Prime`, href: prime.href }
+          : doseAction("Log conditioner dose"),
+        { label: "Open cycle tracker", href: "/cycle" },
+      ],
+      suggestedChangePercent: changePlan?.percent,
     })
   }
 
   if (nitrite != null && nitrite > 0) {
+    const prime = doseById("dose-prime")
     advice.push({
       id: "nitrite",
       parameter: "nitrite",
       severity: nitrite >= 0.5 ? "urgent" : "action",
       title: "Nitrite is elevated",
-      detail: `${formatReading("nitrite", nitrite, input.prefs, waterType)} means the nitrogen cycle isn’t finished or crashed. Water change and retest daily until it hits 0.`,
-      actions: [wc, { label: "Open cycle tracker", href: "/cycle" }],
+      detail: `${formatReading("nitrite", nitrite, input.prefs, waterType)} means the nitrogen cycle isn’t finished or crashed. Water change and retest daily until it hits 0.${
+        changePlan ? ` Plan: ~${changePlan.percent}% (${formatVolume(changePlan.gallons, input.prefs)}).` : ""
+      }${prime ? ` Detox: ~${prime.amount} ${prime.unit} ${prime.productName}.` : ""}`,
+      actions: [
+        wc,
+        prime
+          ? { label: `Dose ${prime.amount} ${prime.unit} Prime`, href: prime.href }
+          : doseAction("Log conditioner dose"),
+        { label: "Open cycle tracker", href: "/cycle" },
+      ],
+      suggestedChangePercent: changePlan?.percent,
     })
   }
 
   const nitrate = input.latest.nitrate
-  const nitrateTarget = resolveTarget("nitrate", ranges, input.prefs, waterType)
+  const nitrateTarget = targetOf("nitrate")
   if (nitrate != null && nitrateTarget) {
     if (nitrate > nitrateTarget.max) {
       const over = nitrate - nitrateTarget.max
@@ -156,8 +227,11 @@ export function buildTestAdvice(input: {
         severity: over > nitrateTarget.max ? "action" : "watch",
         source: nitrateTarget.source,
         title: "Nitrate above target",
-        detail: `${formatReading("nitrate", nitrate, input.prefs, waterType)} vs ${formatTarget("nitrate", nitrateTarget, input.prefs, waterType)}. A water change is the fastest fix; check bioload and feeding if it climbs again.`,
+        detail: `${formatReading("nitrate", nitrate, input.prefs, waterType)} vs ${formatTarget("nitrate", nitrateTarget, input.prefs, waterType)}. A water change is the fastest fix; check bioload and feeding if it climbs again.${
+          changePlan ? ` Try ~${changePlan.percent}% (${formatVolume(changePlan.gallons, input.prefs)}).` : ""
+        }`,
         actions: [wc, { label: "Review livestock bioload", href: "/livestock" }],
+        suggestedChangePercent: changePlan?.percent,
       })
     }
   }
@@ -169,20 +243,31 @@ export function buildTestAdvice(input: {
     input.waterChanges.map((change) => ({ changedAt: change.changed_at })),
   )
   if (nitrateRising && !advice.some((item) => item.id === "nitrate-high")) {
+    const bump = Math.max(
+      changePlan?.percent ?? 0,
+      Math.min(40, (Number(input.tank.water_change_percent) || 15) + 10),
+    )
+    const bumpGallons = waterChangeGallons(input.tank, bump)
     advice.push({
       id: "nitrate-rising",
       parameter: "nitrate",
       severity: "watch",
       source: "trend",
       title: "Nitrate keeps climbing",
-      detail:
-        "Recent nitrate readings are rising even with water changes. Consider a larger change, fewer feedings, or more cleanup crew / export.",
-      actions: [wc, { label: "Check bioload", href: "/livestock" }],
+      detail: `Recent nitrate readings are rising even with water changes. Consider a larger ~${bump}% change (${formatVolume(bumpGallons, input.prefs)}), fewer feedings, or more cleanup crew / export.`,
+      actions: [
+        {
+          label: `Do ~${bump}% · ${formatVolume(bumpGallons, input.prefs)}`,
+          href: "/#reminders",
+        },
+        { label: "Check bioload", href: "/livestock" },
+      ],
+      suggestedChangePercent: bump,
     })
   }
 
   const alk = input.latest.alkalinity
-  const alkTarget = resolveTarget("alkalinity", ranges, input.prefs, waterType)
+  const alkTarget = targetOf("alkalinity")
   if (alk != null && alkTarget) {
     const outside = distanceOutside(alk, alkTarget.min, alkTarget.max)
     if (outside > 0) {
@@ -206,18 +291,34 @@ export function buildTestAdvice(input: {
                 ? "Dose a KH buffer slowly and retest — sudden swings stress fish."
                 : "Dose alkalinity (or two-part) in small increments and retest before the next dose."
             }`
-          : `${formatReading("alkalinity", alk, input.prefs, waterType)} is above ${formatTarget("alkalinity", alkTarget, input.prefs, waterType)}. Hold buffers and let consumption or a water change bring it down.`,
-        actions: low ? [doseAction(fw ? "Log KH buffer dose" : "Log alk dose"), { label: "Retest later", href: "/tests" }] : [wc],
+          : `${formatReading("alkalinity", alk, input.prefs, waterType)} is above ${formatTarget("alkalinity", alkTarget, input.prefs, waterType)}. Hold buffers${
+              changePlan
+                ? ` and try a ~${changePlan.percent}% water change (${formatVolume(changePlan.gallons, input.prefs)})`
+                : " and let consumption or a water change bring it down"
+            }.`,
+        actions: low
+          ? [
+              (() => {
+                const dose = doseById("dose-alk") ?? doseById("dose-ph-buffer")
+                return dose
+                  ? { label: `Dose ${dose.amount} ${dose.unit}`, href: dose.href }
+                  : doseAction(fw ? "Log KH buffer dose" : "Log alk dose")
+              })(),
+              { label: "Retest later", href: "/tests" },
+            ]
+          : [wc],
+        suggestedChangePercent: low ? undefined : changePlan?.percent,
       })
     }
   }
 
   const calcium = input.latest.calcium
-  const caTarget = resolveTarget("calcium", ranges, input.prefs, waterType)
+  const caTarget = targetOf("calcium")
   if (!fw && calcium != null && caTarget) {
     const outside = distanceOutside(calcium, caTarget.min, caTarget.max)
     if (outside > 0) {
       const low = calcium < caTarget.min
+      const caDose = doseById("dose-calcium")
       advice.push({
         id: "calcium",
         parameter: "calcium",
@@ -225,15 +326,23 @@ export function buildTestAdvice(input: {
         source: caTarget.source,
         title: low ? "Calcium is low" : "Calcium is high",
         detail: low
-          ? `${formatReading("calcium", calcium, input.prefs, waterType)} vs ${formatTarget("calcium", caTarget, input.prefs, waterType)}. Dose calcium (keep alk in step if you run two-part) and retest.`
+          ? `${formatReading("calcium", calcium, input.prefs, waterType)} vs ${formatTarget("calcium", caTarget, input.prefs, waterType)}.${
+              caDose ? ` ${caDose.summary} should raise it about ${caDose.raiseBy} ppm.` : " Dose calcium (keep alk in step if you run two-part) and retest."
+            }`
           : `${formatReading("calcium", calcium, input.prefs, waterType)} is above target. Pause calcium dosing and retest after a day.`,
-        actions: low ? [doseAction("Log calcium dose")] : [{ label: "View dosing history", href: "/dosing" }],
+        actions: low
+          ? [
+              caDose
+                ? { label: `Dose ${caDose.amount} ${caDose.unit}`, href: caDose.href }
+                : doseAction("Log calcium dose"),
+            ]
+          : [{ label: "View dosing history", href: "/dosing" }],
       })
     }
   }
 
   const phosphate = input.latest.phosphate
-  const po4Target = resolveTarget("phosphate", ranges, input.prefs, waterType)
+  const po4Target = targetOf("phosphate")
   if (phosphate != null && po4Target && phosphate > po4Target.max) {
     advice.push({
       id: "phosphate",
@@ -241,13 +350,16 @@ export function buildTestAdvice(input: {
       severity: phosphate > po4Target.max * 3 ? "action" : "watch",
       source: po4Target.source,
       title: "Phosphate above target",
-      detail: `${formatReading("phosphate", phosphate, input.prefs, waterType)} vs ${formatTarget("phosphate", po4Target, input.prefs, waterType)}. Water change, reduce feeding, and consider media / export if it stays high.`,
+      detail: `${formatReading("phosphate", phosphate, input.prefs, waterType)} vs ${formatTarget("phosphate", po4Target, input.prefs, waterType)}. Water change, reduce feeding, and consider media / export if it stays high.${
+        changePlan ? ` Start with ~${changePlan.percent}% (${formatVolume(changePlan.gallons, input.prefs)}).` : ""
+      }`,
       actions: [wc, doseAction("Log phosphate treatment")],
+      suggestedChangePercent: changePlan?.percent,
     })
   }
 
   const ph = input.latest.ph
-  const phTarget = resolveTarget("ph", ranges, input.prefs, waterType)
+  const phTarget = targetOf("ph")
   if (ph != null && phTarget) {
     const outside = distanceOutside(ph, phTarget.min, phTarget.max)
     if (outside > 0) {
@@ -278,7 +390,7 @@ export function buildTestAdvice(input: {
   }
 
   const salinity = input.latest.salinity
-  const salTarget = resolveTarget("salinity", ranges, input.prefs, waterType)
+  const salTarget = targetOf("salinity")
   if (!fw && salinity != null && salTarget) {
     const outside = distanceOutside(salinity, salTarget.min, salTarget.max)
     if (outside > 0) {
@@ -298,7 +410,7 @@ export function buildTestAdvice(input: {
   }
 
   const temperature = input.latest.temperature
-  const tempTarget = resolveTarget("temperature", ranges, input.prefs, waterType)
+  const tempTarget = targetOf("temperature")
   if (temperature != null && tempTarget) {
     const outside = distanceOutside(temperature, tempTarget.min, tempTarget.max)
     if (outside > 0) {
@@ -315,7 +427,6 @@ export function buildTestAdvice(input: {
     }
   }
 
-  // Two-part hint when both alk and Ca are low on saltwater.
   if (
     !fw &&
     advice.some((item) => item.id === "alkalinity" && item.title.includes("low")) &&
@@ -326,7 +437,8 @@ export function buildTestAdvice(input: {
       parameter: "alkalinity",
       severity: "info",
       title: "Alk and calcium are both low",
-      detail: "A balanced two-part (or calcium reactor) usually works better than chasing one number alone. Dose evenly and retest both.",
+      detail:
+        "A balanced two-part (or calcium reactor) usually works better than chasing one number alone. Dose evenly and retest both.",
       actions: [doseAction("Log two-part dose")],
     })
   }
@@ -359,4 +471,23 @@ export function buildTestAdvice(input: {
   }
 
   return actionable.sort((a, b) => severityRank(a.severity) - severityRank(b.severity))
+}
+
+/** Convenience for Home / calculator prefills. */
+export function getWaterChangeSuggestion(input: {
+  tank: Tank
+  latest: Partial<Record<ParameterKey, number>>
+  livestock: LivestockRow[]
+  prefs: UnitPrefs
+}) {
+  return suggestWaterChange(input)
+}
+
+export function getDoseSuggestions(input: {
+  tank: Tank
+  latest: Partial<Record<ParameterKey, number>>
+  livestock: LivestockRow[]
+  prefs: UnitPrefs
+}) {
+  return suggestDoses(input)
 }

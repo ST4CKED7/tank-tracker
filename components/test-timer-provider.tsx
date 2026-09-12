@@ -10,10 +10,14 @@ import {
   type ReactNode,
 } from "react"
 
-export type TestTimerKind = "shake" | "wait"
+export type TestTimerKind = "shake" | "bottle_shake" | "wait"
 
 export type TestTimer = {
   id: string
+  /** What the timer is for — e.g. "Ammonia", "Nitrite". */
+  testName: string
+  /** Optional kit/method context. */
+  kitLabel?: string
   label: string
   kind: TestTimerKind
   durationSeconds: number
@@ -22,7 +26,8 @@ export type TestTimer = {
 }
 
 type StartTimerInput = {
-  label: string
+  testName: string
+  kitLabel?: string
   kind: TestTimerKind
   durationSeconds: number
 }
@@ -37,6 +42,12 @@ type TestTimerContextValue = {
 const STORAGE_KEY = "tt-active-timers"
 const TestTimerContext = createContext<TestTimerContextValue | null>(null)
 
+export function timerKindLabel(kind: TestTimerKind) {
+  if (kind === "bottle_shake") return "Bottle #2 shake"
+  if (kind === "shake") return "Tube shake"
+  return "Wait"
+}
+
 function readStoredTimers(): TestTimer[] {
   if (typeof window === "undefined") return []
   try {
@@ -44,15 +55,30 @@ function readStoredTimers(): TestTimer[] {
     if (!raw) return []
     const parsed = JSON.parse(raw) as TestTimer[]
     if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (item) =>
-        item &&
-        typeof item.id === "string" &&
-        typeof item.label === "string" &&
-        (item.kind === "shake" || item.kind === "wait") &&
-        typeof item.durationSeconds === "number" &&
-        typeof item.endsAt === "number",
-    )
+    const timers: TestTimer[] = []
+    for (const item of parsed) {
+      if (!item || typeof item.id !== "string") continue
+      if (item.kind !== "shake" && item.kind !== "bottle_shake" && item.kind !== "wait") continue
+      if (typeof item.durationSeconds !== "number" || typeof item.endsAt !== "number") continue
+      const testName =
+        typeof item.testName === "string" && item.testName
+          ? item.testName
+          : typeof item.label === "string"
+            ? item.label.replace(/^.*·\s*/, "").replace(/^(Shake|Wait|Bottle #2 shake|Tube shake)\s*·\s*/i, "").trim() ||
+              item.label
+            : "Test"
+      const kindLabel = timerKindLabel(item.kind)
+      timers.push({
+        id: item.id,
+        testName,
+        kitLabel: typeof item.kitLabel === "string" ? item.kitLabel : undefined,
+        label: `${testName} · ${kindLabel}`,
+        kind: item.kind,
+        durationSeconds: item.durationSeconds,
+        endsAt: item.endsAt,
+      })
+    }
+    return timers
   } catch {
     return []
   }
@@ -100,9 +126,13 @@ export function TestTimerProvider({ children }: { children: ReactNode }) {
 
   const startTimer = useCallback((input: StartTimerInput) => {
     const duration = Math.max(1, Math.round(input.durationSeconds))
+    const kindLabel = timerKindLabel(input.kind)
+    const testName = input.testName.trim() || "Test"
     const timer: TestTimer = {
       id: `${input.kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      label: input.label,
+      testName,
+      kitLabel: input.kitLabel?.trim() || undefined,
+      label: `${testName} · ${kindLabel}`,
       kind: input.kind,
       durationSeconds: duration,
       endsAt: Date.now() + duration * 1000,

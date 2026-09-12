@@ -27,11 +27,17 @@ export function DoseCalculator({
   systemGallons,
   prefs,
   onApply,
+  initialProductId,
+  initialCurrent,
+  initialTarget,
 }: {
   freshwater: boolean
   systemGallons: number
   prefs: UnitPrefs
   onApply: (prefill: DosePrefill) => void
+  initialProductId?: string | null
+  initialCurrent?: string | null
+  initialTarget?: string | null
 }) {
   const products = useMemo(
     () => doseProductsFor(freshwater ? "freshwater" : "saltwater"),
@@ -45,10 +51,15 @@ export function DoseCalculator({
     return seen
   }, [products])
 
-  const [productId, setProductId] = useState(products[0]?.id ?? "prime")
+  const preferredId =
+    initialProductId && products.some((item) => item.id === initialProductId)
+      ? initialProductId
+      : products[0]?.id ?? "prime"
+
+  const [productId, setProductId] = useState(preferredId)
   const product = products.find((item) => item.id === productId) ?? products[0]
-  const [current, setCurrent] = useState("")
-  const [target, setTarget] = useState("")
+  const [current, setCurrent] = useState(initialCurrent ?? "")
+  const [target, setTarget] = useState(initialTarget ?? "")
   const [volumeInput, setVolumeInput] = useState(() =>
     String(displayVolume(systemGallons, prefs, systemGallons >= 10 ? 0 : 1)),
   )
@@ -56,6 +67,14 @@ export function DoseCalculator({
   useEffect(() => {
     setVolumeInput(String(displayVolume(systemGallons, prefs, systemGallons >= 10 ? 0 : 1)))
   }, [systemGallons, prefs])
+
+  useEffect(() => {
+    if (initialProductId && products.some((item) => item.id === initialProductId)) {
+      setProductId(initialProductId)
+    }
+    if (initialCurrent != null && initialCurrent !== "") setCurrent(initialCurrent)
+    if (initialTarget != null && initialTarget !== "") setTarget(initialTarget)
+  }, [initialProductId, initialCurrent, initialTarget, products])
 
   useEffect(() => {
     if (!products.some((item) => item.id === productId)) {

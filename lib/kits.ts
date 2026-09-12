@@ -27,7 +27,10 @@ export type TestGuide = {
   /** When set, Log Tests shows a color-card select instead of free entry. */
   colorValues?: number[]
   waitSeconds?: number
+  /** Shake the filled test tube (e.g. nitrate 1 minute). */
   shakeSeconds?: number
+  /** Shake reagent bottle #2 before dosing (e.g. nitrate 30 seconds). */
+  bottleShakeSeconds?: number
   titration?: {
     dropUnit: number
     unit: string
@@ -320,6 +323,7 @@ export const TEST_GUIDES: TestGuide[] = [
     method: "color",
     colorValues: apiColors("nitrate"),
     waitSeconds: 300,
+    bottleShakeSeconds: 30,
     shakeSeconds: 60,
     steps: [
       "Rinse a clean test tube with tank water, then fill to the 5 ml line.",
@@ -527,6 +531,7 @@ export const TEST_GUIDES: TestGuide[] = [
     method: "color",
     colorValues: apiColors("nitrate"),
     waitSeconds: 300,
+    bottleShakeSeconds: 30,
     shakeSeconds: 60,
     steps: [
       "Rinse a clean test tube with tank water, then fill to the 5 ml line.",
@@ -628,6 +633,7 @@ export const TEST_GUIDES: TestGuide[] = [
     method: "color",
     colorValues: apiColors("nitrate"),
     waitSeconds: 300,
+    bottleShakeSeconds: 30,
     shakeSeconds: 60,
     steps: [
       "Rinse a clean test tube with tank water, then fill to the 5 ml line.",

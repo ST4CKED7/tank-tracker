@@ -50,8 +50,14 @@ const FRESHWATER_META: Record<ParameterKey, ParameterMeta> = {
 /** @deprecated Prefer parameterMeta(system, waterType) */
 export const PARAMETER_META = SALTWATER_META
 
+/** API Freshwater Master / standard-range pH card. */
+export const API_FW_PH_COLORS = [6.0, 6.4, 6.8, 7.0, 7.2, 7.4, 7.6, 7.8, 8.0, 8.4]
+
+/** API Saltwater Master high-range pH card. */
+export const API_SW_PH_COLORS = [7.4, 7.6, 7.8, 8.0, 8.2, 8.4, 8.6, 8.8]
+
 export const API_COLOR_VALUES: Partial<Record<ParameterKey, number[]>> = {
-  ph: [6.0, 6.4, 6.8, 7.0, 7.2, 7.6, 8.0, 8.4, 8.8],
+  ph: [...API_FW_PH_COLORS],
   ammonia: [0, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0],
   nitrite: [0, 0.25, 0.5, 1.0, 2.0, 5.0],
   nitrate: [0, 5, 10, 20, 40, 80, 160],

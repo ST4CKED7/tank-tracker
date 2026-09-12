@@ -2,6 +2,7 @@ import { BioloadGauge } from "@/components/bioload-gauge"
 import { CleanupCrewPanel } from "@/components/cleanup-crew-panel"
 import { CsvExport, LatestReadings } from "@/components/latest-readings"
 import { EmptyState } from "@/components/empty-state"
+import { HomeCleanupCrew } from "@/components/home-cleanup-crew"
 import { PageHero } from "@/components/page-hero"
 import { PullToRefresh } from "@/components/pull-to-refresh"
 import { NotificationsPanel } from "@/components/notifications-panel"
@@ -27,15 +28,16 @@ import { sumpMediaLabel } from "@/lib/sump-media"
 import { formatVolume, unitPrefsFromTank } from "@/lib/units"
 import { displayTankType } from "@/lib/tank-profiles"
 import { Fish, FlaskConical } from "lucide-react"
+import { Suspense } from "react"
 
 export default async function HomePage() {
   const data = await getDashboardData({
     livestock: true,
-    tests: 80,
-    waterChanges: 40,
+    tests: 40,
+    waterChanges: 20,
     doses: false,
     equipment: true,
-    catalog: true,
+    catalog: false,
   })
   if (!data.tank) {
     return (
@@ -201,12 +203,18 @@ export default async function HomePage() {
               <RemindersPanel tank={data.tank} />
             </div>
           </div>
-          <CleanupCrewPanel
-            tank={data.tank}
-            livestock={data.livestock}
-            catalog={data.catalog}
-            latest={data.latest}
-          />
+          <Suspense
+            fallback={
+              <CleanupCrewPanel
+                tank={data.tank}
+                livestock={data.livestock}
+                catalog={[]}
+                latest={data.latest}
+              />
+            }
+          >
+            <HomeCleanupCrew tank={data.tank} livestock={data.livestock} latest={data.latest} />
+          </Suspense>
         </div>
         <Card className="tt-fade-up">
           <CardHeader>

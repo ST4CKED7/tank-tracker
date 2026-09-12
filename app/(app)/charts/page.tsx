@@ -7,9 +7,9 @@ import { getDashboardData } from "@/lib/queries"
 
 export default async function ChartsPage() {
   const data = await getDashboardData({
-    livestock: true,
-    tests: 400,
-    waterChanges: 100,
+    livestock: "lean",
+    tests: 200,
+    waterChanges: 60,
     doses: false,
     equipment: false,
     catalog: false,

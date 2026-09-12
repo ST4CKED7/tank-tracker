@@ -217,11 +217,15 @@ export async function logTest(formData: FormData) {
   const { supabase, userId } = await requireUser()
   const tankId = String(formData.get("tank_id"))
   const parameter = String(formData.get("parameter")) as ParameterKey
-  const prefs = await tankPrefs(supabase, tankId)
   let value = Number(formData.get("value"))
   let unit = String(formData.get("unit") || "")
   if (parameter === "temperature") {
-    value = toStoredTemp(value, prefs.temp)
+    const rawTempUnit = String(formData.get("temp_unit") || "")
+    const tempUnit =
+      rawTempUnit === "C" || rawTempUnit === "F"
+        ? rawTempUnit
+        : (await tankPrefs(supabase, tankId)).temp
+    value = toStoredTemp(value, tempUnit)
     unit = "°F"
   }
   const { error } = await supabase.from("test_logs").insert({
@@ -235,7 +239,9 @@ export async function logTest(formData: FormData) {
     tested_at: String(formData.get("tested_at") || new Date().toISOString()),
   })
   if (error) throw error
-  revalidateAppPaths("/", "/tests", "/charts", "/cycle")
+  // Only refresh pages that show readings immediately — avoid a multi-route cascade on every save.
+  revalidatePath("/tests")
+  revalidatePath("/")
 }
 
 export async function logWaterChange(formData: FormData) {

@@ -10,9 +10,9 @@ import { FlaskConical } from "lucide-react"
 
 export default async function TestsPage() {
   const data = await getDashboardData({
-    livestock: true,
-    tests: 60,
-    waterChanges: 30,
+    livestock: "lean",
+    tests: 24,
+    waterChanges: 12,
     doses: false,
     equipment: false,
     catalog: false,

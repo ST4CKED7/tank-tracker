@@ -19,7 +19,7 @@ export type DashboardData = {
 }
 
 export type DashboardOptions = {
-  livestock?: boolean
+  livestock?: boolean | "lean"
   /** false = skip; true = default limit; number = custom limit */
   tests?: boolean | number
   waterChanges?: boolean | number
@@ -66,15 +66,27 @@ export const getActiveTankContext = cache(async () => {
 /** Latest test timestamp per tank — for the switcher tray. */
 export const getTankLastTestMap = cache(async () => {
   const { supabase, userId } = await getAuthedUserId()
-  const { data } = await supabase
-    .from("test_logs")
-    .select("tank_id, tested_at")
-    .eq("user_id", userId)
-    .order("tested_at", { ascending: false })
-    .limit(500)
+  const tanks = await getUserTanks()
+  if (tanks.length === 0) return {} as Record<string, string>
+
+  // One tiny newest-row query per tank beats scanning hundreds of logs on every layout render.
+  const rows = await Promise.all(
+    tanks.map(async (tank) => {
+      const { data } = await supabase
+        .from("test_logs")
+        .select("tested_at")
+        .eq("user_id", userId)
+        .eq("tank_id", tank.id)
+        .order("tested_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      return [tank.id, data?.tested_at ?? null] as const
+    }),
+  )
+
   const map: Record<string, string> = {}
-  for (const row of data ?? []) {
-    if (!map[row.tank_id]) map[row.tank_id] = row.tested_at
+  for (const [tankId, testedAt] of rows) {
+    if (testedAt) map[tankId] = testedAt
   }
   return map
 })
@@ -126,19 +138,28 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
   const testsLimit = limitOf(tests, 400)
   const changesLimit = limitOf(waterChanges, 100)
   const dosesLimit = limitOf(doses, 100)
+  const livestockMode = livestock === "lean" ? "lean" : livestock ? "full" : "off"
+  const livestockSelect =
+    livestockMode === "lean"
+      ? "id, tank_id, species_id, quantity, size_cm, coral_size, sex, nickname, notes, added_on, species:species_catalog(id, common_name, temp_min, temp_max, salinity_min, salinity_max, ph_min, ph_max, alk_min, alk_max, ca_min, ca_max, no3_min, no3_max, po4_min, po4_max)"
+      : "*, species:species_catalog(*)"
 
   const [livestockRes, testsRes, changesRes, dosesRes, equipmentRes, catalogRes] = await Promise.all([
-    livestock
+    livestockMode !== "off"
       ? supabase
           .from("livestock")
-          .select("*, species:species_catalog(*)")
+          .select(livestockSelect)
           .eq("tank_id", tank.id)
           .order("added_on", { ascending: false })
       : Promise.resolve({ data: [] as unknown[] }),
     testsLimit > 0
       ? supabase
           .from("test_logs")
-          .select("*")
+          .select(
+            testsLimit <= 40
+              ? "id, parameter, value, unit, tested_at, source_kit, notes"
+              : "*",
+          )
           .eq("tank_id", tank.id)
           .order("tested_at", { ascending: false })
           .limit(testsLimit)
@@ -146,7 +167,7 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
     changesLimit > 0
       ? supabase
           .from("water_changes")
-          .select("*")
+          .select(changesLimit <= 20 ? "id, changed_at, percent, gallons" : "*")
           .eq("tank_id", tank.id)
           .order("changed_at", { ascending: false })
           .limit(changesLimit)

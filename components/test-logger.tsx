@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { logTest, toggleFavoriteTestKit } from "@/lib/actions"
 import { parameterMeta, type ParameterKey, type WaterType } from "@/lib/parameters"
 import {
   KIT_CATEGORY_LABEL,
   KIT_DISCLAIMER,
   defaultKitFor,
+  isKitId,
   kitsFor,
   normalizeFavoriteKits,
   DEFAULT_FAVORITE_KIT,
@@ -22,27 +23,30 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useUnits } from "@/components/units-provider"
+import { formatTimerClock, useTestTimers } from "@/components/test-timer-provider"
 import { Star } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-function useCountdown(seconds: number | undefined, active: boolean) {
-  const [left, setLeft] = useState(seconds ?? 0)
-  useEffect(() => {
-    if (!active || !seconds) return
-    setLeft(seconds)
-    const id = window.setInterval(() => {
-      setLeft((value) => (value <= 1 ? 0 : value - 1))
-    }, 1000)
-    return () => window.clearInterval(id)
-  }, [active, seconds])
-  return left
-}
 
 const MANUAL_KITS: KitId[] = ["other", "instruments"]
 
 const CATEGORY_ORDER: KitCategory[] = ["liquid", "titration", "digital", "strips", "instrument"]
 
 type KitItem = ReturnType<typeof kitsFor>[number]
+
+function kitStorageKey(tankId: string) {
+  return `tt-selected-kit:${tankId}`
+}
+
+function guideStorageKey(tankId: string) {
+  return `tt-selected-guide:${tankId}`
+}
+
+function readStoredKit(tankId: string, waterType: WaterType): KitId | null {
+  if (typeof window === "undefined") return null
+  const raw = sessionStorage.getItem(kitStorageKey(tankId))
+  if (!isKitId(raw)) return null
+  return kitsFor(waterType).some((item) => item.id === raw) ? raw : null
+}
 
 export function TestLogger({
   tankId,
@@ -57,22 +61,52 @@ export function TestLogger({
   defaultKitId?: string | null
 }) {
   const availableKits = useMemo(() => kitsFor(waterType), [waterType])
+  const favoritesKey = Array.isArray(favoriteKitIds)
+    ? favoriteKitIds.join("\0")
+    : favoriteKitIds == null
+      ? ""
+      : String(favoriteKitIds)
   const initialFavorites = useMemo(
     () =>
       normalizeFavoriteKits(
         favoriteKitIds != null ? favoriteKitIds : [defaultKitId, DEFAULT_FAVORITE_KIT],
         waterType,
       ),
-    [favoriteKitIds, defaultKitId, waterType],
+    // favoritesKey captures list contents; avoid resetting on new array identity after each save
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [favoritesKey, defaultKitId, waterType],
   )
   const resolvedDefault = defaultKitFor(waterType, initialFavorites[0] ?? defaultKitId)
-  const [kit, setKit] = useState<KitId>(resolvedDefault)
+  const [kit, setKitState] = useState<KitId>(resolvedDefault)
   const [favorites, setFavorites] = useState<KitId[]>(initialFavorites)
-  const [guideId, setGuideId] = useState("")
+  const [guideId, setGuideIdState] = useState("")
   const [drops, setDrops] = useState(20)
   const [value, setValue] = useState(waterType === "freshwater" ? "7.2" : "8.2")
-  const [timerOn, setTimerOn] = useState(false)
   const [pendingFavorite, startFavorite] = useTransition()
+  const lastKitForGuides = useRef<KitId | null>(null)
+
+  function setKit(next: KitId) {
+    setKitState(next)
+    try {
+      sessionStorage.setItem(kitStorageKey(tankId), next)
+    } catch {
+      /* ignore quota / private mode */
+    }
+  }
+
+  function setGuideId(next: string) {
+    setGuideIdState(next)
+    try {
+      sessionStorage.setItem(guideStorageKey(tankId), `${kit}:${next}`)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  useEffect(() => {
+    const stored = readStoredKit(tankId, waterType)
+    if (stored) setKitState(stored)
+  }, [tankId, waterType])
 
   useEffect(() => {
     const nextFavorites = normalizeFavoriteKits(
@@ -80,25 +114,49 @@ export function TestLogger({
       waterType,
     )
     setFavorites(nextFavorites)
-    setKit(defaultKitFor(waterType, nextFavorites[0] ?? defaultKitId))
-  }, [waterType, favoriteKitIds, defaultKitId])
+    // Keep the current kit after logging (revalidate refreshes props). Only fall back
+    // if the selection is no longer available for this water type.
+    setKitState((current) => {
+      if (kitsFor(waterType).some((item) => item.id === current)) return current
+      const stored = readStoredKit(tankId, waterType)
+      if (stored) return stored
+      return defaultKitFor(waterType, nextFavorites[0] ?? defaultKitId)
+    })
+  }, [waterType, favoritesKey, defaultKitId, favoriteKitIds, tankId])
 
   const guides = useMemo(() => TEST_GUIDES.filter((guide) => guide.kit === kit), [kit])
   const guide = TEST_GUIDES.find((item) => item.id === guideId) ?? guides[0]
-  const waitLeft = useCountdown(guide?.waitSeconds, timerOn)
-  const shakeLeft = useCountdown(guide?.shakeSeconds, timerOn)
   const isManual = MANUAL_KITS.includes(kit)
 
   useEffect(() => {
-    const first = guides[0]
-    if (first) {
-      setGuideId(first.id)
-      if (first.method === "titration") setDrops(first.parameter === "alkalinity" ? 8 : 20)
-      if (first.colorValues?.[0] != null) setValue(String(first.colorValues[0]))
-      else if (first.method !== "titration") setValue(waterType === "freshwater" ? "7.2" : "8.2")
+    if (guides.length === 0) return
+
+    const kitChanged = lastKitForGuides.current !== kit
+    lastKitForGuides.current = kit
+
+    if (!kitChanged && guides.some((item) => item.id === guideId)) return
+
+    let nextGuide = guides[0]
+    try {
+      const stored = sessionStorage.getItem(guideStorageKey(tankId))
+      if (stored?.startsWith(`${kit}:`)) {
+        const id = stored.slice(kit.length + 1)
+        nextGuide = guides.find((item) => item.id === id) ?? guides[0]
+      }
+    } catch {
+      /* ignore */
     }
-    setTimerOn(false)
-  }, [kit, guides, waterType])
+
+    setGuideIdState(nextGuide.id)
+    if (nextGuide.method === "titration") setDrops(nextGuide.parameter === "alkalinity" ? 8 : 20)
+    if (nextGuide.colorValues?.[0] != null) {
+      const preferred = waterType === "freshwater" ? 7.2 : 8.2
+      const match = nextGuide.colorValues.find((v) => v === preferred)
+      setValue(String(match ?? nextGuide.colorValues[0]))
+    } else if (nextGuide.method !== "titration") {
+      setValue(waterType === "freshwater" ? "7.2" : "8.2")
+    }
+  }, [kit, guides, waterType, tankId, guideId])
 
   const computed =
     guide?.method === "titration" && guide.titration
@@ -241,7 +299,6 @@ export function TestLogger({
                   variant={guide?.id === item.id ? "default" : "outline"}
                   onClick={() => {
                     setGuideId(item.id)
-                    setTimerOn(false)
                     if (item.method === "titration") setDrops(item.parameter === "alkalinity" ? 8 : 20)
                     if (item.colorValues?.[0] != null) setValue(String(item.colorValues[0]))
                     else setValue("")
@@ -257,7 +314,7 @@ export function TestLogger({
             <ManualParams tankId={tankId} waterType={waterType} kit={kit} />
           ) : guide ? (
             <>
-              <GuideSteps guide={guide} waitLeft={waitLeft} shakeLeft={shakeLeft} timerOn={timerOn} setTimerOn={setTimerOn} />
+              <GuideSteps guide={guide} />
               <LogForm
                 tankId={tankId}
                 guide={guide}
@@ -278,19 +335,11 @@ export function TestLogger({
   )
 }
 
-function GuideSteps({
-  guide,
-  waitLeft,
-  shakeLeft,
-  timerOn,
-  setTimerOn,
-}: {
-  guide: TestGuide
-  waitLeft: number
-  shakeLeft: number
-  timerOn: boolean
-  setTimerOn: (v: boolean) => void
-}) {
+function GuideSteps({ guide }: { guide: TestGuide }) {
+  const { startTimer } = useTestTimers()
+  const shakeLabel = `Shake · ${guide.title}`
+  const waitLabel = `Wait · ${guide.title}`
+
   return (
     <div className="space-y-3">
       <ol className="list-decimal space-y-2 pl-5 text-sm">
@@ -306,19 +355,38 @@ function GuideSteps({
         </ul>
       ) : null}
       {guide.waitSeconds || guide.shakeSeconds ? (
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <Button type="button" variant="outline" size="sm" onClick={() => setTimerOn(true)}>
-            Start timers
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
           {guide.shakeSeconds ? (
-            <span className={shakeLeft === 0 && timerOn ? "font-medium text-primary" : ""}>
-              Shake: {timerOn ? `${shakeLeft}s` : `${guide.shakeSeconds}s`}
-            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                startTimer({
+                  kind: "shake",
+                  label: `${guide.kitLabel} · ${shakeLabel}`,
+                  durationSeconds: guide.shakeSeconds!,
+                })
+              }
+            >
+              Start shake ({formatTimerClock(guide.shakeSeconds)})
+            </Button>
           ) : null}
           {guide.waitSeconds ? (
-            <span className={waitLeft === 0 && timerOn ? "font-medium text-primary" : ""}>
-              Wait: {timerOn ? `${waitLeft}s` : `${guide.waitSeconds}s`}
-            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                startTimer({
+                  kind: "wait",
+                  label: `${guide.kitLabel} · ${waitLabel}`,
+                  durationSeconds: guide.waitSeconds!,
+                })
+              }
+            >
+              Start wait ({formatTimerClock(guide.waitSeconds)})
+            </Button>
           ) : null}
         </div>
       ) : null}
@@ -392,19 +460,46 @@ function LogForm({
             {meta.label} ({meta.unit || "—"})
           </Label>
           {colors?.length ? (
-            <select
-              id="value"
-              name="value"
-              className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-            >
-              {colors.map((color) => (
-                <option key={color} value={String(color)}>
-                  {color}
-                </option>
-              ))}
-            </select>
+            <div className="space-y-2">
+              {(() => {
+                const isCustom = !colors.some((color) => String(color) === value)
+                return (
+                  <>
+                    <select
+                      id="value"
+                      name={isCustom ? undefined : "value"}
+                      className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                      value={isCustom ? "__custom" : value}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom") {
+                          setValue("")
+                          return
+                        }
+                        setValue(e.target.value)
+                      }}
+                    >
+                      {colors.map((color) => (
+                        <option key={color} value={String(color)}>
+                          {color}
+                        </option>
+                      ))}
+                      <option value="__custom">Custom…</option>
+                    </select>
+                    {isCustom ? (
+                      <Input
+                        name="value"
+                        type="number"
+                        step="0.1"
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                        placeholder="e.g. 7.8"
+                        required
+                      />
+                    ) : null}
+                  </>
+                )
+              })()}
+            </div>
           ) : (
             <Input
               id="value"
@@ -461,6 +556,9 @@ function ManualParams({
             <input type="hidden" name="parameter" value={parameter} />
             <input type="hidden" name="unit" value={meta.unit} />
             <input type="hidden" name="source_kit" value={kit} />
+            {parameter === "temperature" ? (
+              <input type="hidden" name="temp_unit" value={system.temp} />
+            ) : null}
             <Label htmlFor={`${kit}-${parameter}`}>
               {meta.label} ({meta.unit})
             </Label>

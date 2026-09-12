@@ -1,5 +1,5 @@
 import type { WaterType } from "@/lib/parameters"
-import { API_COLOR_VALUES } from "@/lib/parameters"
+import { API_COLOR_VALUES, API_FW_PH_COLORS, API_SW_PH_COLORS } from "@/lib/parameters"
 
 export type KitId =
   | "freshwater_master"
@@ -258,7 +258,7 @@ export const TEST_GUIDES: TestGuide[] = [
     parameter: "ph",
     title: "pH",
     method: "color",
-    colorValues: apiColors("ph"),
+    colorValues: API_FW_PH_COLORS,
     steps: [
       "Rinse a clean test tube with tank water, then fill to the 5 ml line.",
       "Hold the pH bottle fully vertical and add 3 drops (follow your booklet if it differs).",
@@ -463,7 +463,7 @@ export const TEST_GUIDES: TestGuide[] = [
     parameter: "ph",
     title: "High-range pH",
     method: "color",
-    colorValues: apiColors("ph"),
+    colorValues: API_SW_PH_COLORS,
     steps: [
       "Rinse a clean test tube with tank water, then fill to the 5 ml line.",
       "Hold the high-range pH bottle fully vertical and add 5 drops.",

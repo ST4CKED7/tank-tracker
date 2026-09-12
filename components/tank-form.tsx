@@ -105,7 +105,7 @@ export function TankForm({
         <p className="text-xs text-muted-foreground">
           Applies to this tank’s pages. Use the sun/moon control for light or dark within the theme.
         </p>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
           {TANK_THEME_IDS.map((id) => {
             const meta = TANK_THEMES[id]
             const selected = colorTheme === id

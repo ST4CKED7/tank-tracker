@@ -258,40 +258,41 @@ export function NotificationsPanel({
               <li
                 key={item.id}
                 className={cn(
-                  "flex gap-2 rounded-xl border px-3 py-3",
+                  "flex items-start gap-3 rounded-xl border px-3 py-3",
                   item.tone === "urgent" && "border-destructive/30 bg-destructive/5",
                   item.tone === "soon" && "border-amber-500/25 bg-amber-500/8",
                   item.tone === "watch" && "border-primary/15 bg-background/50",
                 )}
               >
-                <Link href={item.href} className="flex min-w-0 flex-1 gap-3 transition-colors hover:opacity-90">
-                  <span
-                    className={cn(
-                      "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
-                      item.tone === "urgent" && "bg-destructive/15 text-destructive",
-                      item.tone === "soon" && "bg-amber-500/15 text-amber-800 dark:text-amber-200",
-                      item.tone === "watch" && "bg-primary/10 text-primary",
-                    )}
-                  >
-                    <KindIcon kind={item.kind} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="font-medium">{item.title}</span>
-                      <span className="text-xs text-muted-foreground">{item.meta}</span>
-                    </span>
-                    <span className="mt-0.5 block text-sm text-muted-foreground">{item.detail}</span>
-                  </span>
-                </Link>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 shrink-0 self-start text-xs text-muted-foreground"
-                  onClick={() => ignoreItem(item)}
+                <span
+                  className={cn(
+                    "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
+                    item.tone === "urgent" && "bg-destructive/15 text-destructive",
+                    item.tone === "soon" && "bg-amber-500/15 text-amber-800 dark:text-amber-200",
+                    item.tone === "watch" && "bg-primary/10 text-primary",
+                  )}
                 >
-                  Ignore
-                </Button>
+                  <KindIcon kind={item.kind} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium">{item.title}</div>
+                  <div className="text-xs text-muted-foreground">{item.meta}</div>
+                  <p className="mt-1 text-sm text-muted-foreground">{item.detail}</p>
+                </div>
+                <div className="flex w-[5.75rem] shrink-0 flex-col gap-1.5">
+                  <Button asChild size="sm" className="h-9 w-full px-2">
+                    <Link href={item.href}>Open</Link>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 w-full px-2 text-muted-foreground"
+                    onClick={() => ignoreItem(item)}
+                  >
+                    Ignore
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>

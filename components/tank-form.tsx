@@ -14,19 +14,19 @@ import {
   parseTankIconColor,
 } from "@/components/tank-icon"
 import { softHaptic } from "@/components/form-success-toast"
+import { TankIconCropDialog } from "@/components/tank-icon-crop-dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SUMP_MEDIA_OPTIONS, type SumpMediaId } from "@/lib/sump-media"
-import { prepareTankPhoto } from "@/lib/tank-photo"
 import { defaultTankType, profilesForWater } from "@/lib/tank-profiles"
 import { TANK_THEME_IDS, TANK_THEMES, parseTankTheme } from "@/lib/tank-themes"
 import { defaultTimeZone, timeZoneGroups } from "@/lib/timezones"
 import { displayVolume, unitPrefsFromTank, volumeLabel, type VolumeUnit } from "@/lib/units"
 import { useUnits } from "@/components/units-provider"
 import { cn } from "@/lib/utils"
-import { ChevronDown, ImagePlus, X } from "lucide-react"
+import { Camera, ChevronDown, ImagePlus, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
@@ -63,8 +63,18 @@ export function TankForm({
   const [colorTheme, setColorTheme] = useState(() => parseTankTheme(tank?.color_theme))
   const [showMore, setShowMore] = useState(false)
   const [iconPending, startIconTransition] = useTransition()
-  const iconFileRef = useRef<HTMLInputElement>(null)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
+  const iconCameraRef = useRef<HTMLInputElement>(null)
+  const iconLibraryRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+  const iconAccept = "image/*,image/jpeg,image/png,image/webp,image/heic,image/heif"
+
+  function clearCropSrc() {
+    setCropSrc((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return null
+    })
+  }
 
   function selectGlyph(id: typeof icon) {
     setIcon(id)
@@ -85,25 +95,34 @@ export function TankForm({
 
   function onIconPhotoPick(file: File | null) {
     if (!tank?.id || !file) return
+    const url = URL.createObjectURL(file)
+    setCropSrc((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return url
+    })
+    if (iconCameraRef.current) iconCameraRef.current.value = ""
+    if (iconLibraryRef.current) iconLibraryRef.current.value = ""
+  }
+
+  function uploadCroppedIcon(file: File) {
+    if (!tank?.id) return
     startIconTransition(async () => {
       try {
-        const prepared = await prepareTankPhoto(file, 512, 0.85)
         const fd = new FormData()
         fd.set("tank_id", tank.id)
-        fd.set("photo", prepared, prepared.name || "tank-icon.jpg")
+        fd.set("photo", file, file.name || "tank-icon.jpg")
         const result = await setTankIconPhoto(fd)
         if (!result?.ok) {
           toast.error(result?.error || "Could not set photo icon.")
           return
         }
         setIconPhotoUrl(result.url)
+        clearCropSrc()
         softHaptic()
         toast.success("Tank icon updated", { duration: 2200, className: "tt-toast-success" })
         router.refresh()
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not set photo icon.")
-      } finally {
-        if (iconFileRef.current) iconFileRef.current.value = ""
       }
     })
   }
@@ -314,45 +333,65 @@ export function TankForm({
                 <p className="text-sm font-medium">{iconPhotoUrl ? "Custom photo" : TANK_ICON_LABELS[icon]}</p>
                 <p className="text-xs text-muted-foreground">
                   {tank?.id
-                    ? "Use a photo or pick a glyph for the tank switcher."
+                    ? "Take or choose a photo, then crop it to fit the tank switcher icon."
                     : "Save the tank first to upload a custom photo icon."}
                 </p>
               </div>
-              {tank?.id ? (
-                <div className="flex shrink-0 flex-wrap gap-1.5">
-                  <input
-                    ref={iconFileRef}
-                    type="file"
-                    accept="image/*,image/jpeg,image/png,image/webp,image/heic,image/heif"
-                    className="sr-only"
-                    tabIndex={-1}
-                    onChange={(event) => onIconPhotoPick(event.target.files?.[0] ?? null)}
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={iconPending}
-                    onClick={() => iconFileRef.current?.click()}
-                  >
-                    <ImagePlus className="size-3.5" />
-                    {iconPhotoUrl ? "Change" : "Photo"}
-                  </Button>
-                  {iconPhotoUrl ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={iconPending}
-                      onClick={() => selectGlyph(icon)}
-                    >
-                      <X className="size-3.5" />
-                      Clear
-                    </Button>
-                  ) : null}
-                </div>
+              {tank?.id && iconPhotoUrl ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={iconPending}
+                  onClick={() => selectGlyph(icon)}
+                >
+                  <X className="size-3.5" />
+                  Clear
+                </Button>
               ) : null}
             </div>
+            {tank?.id ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input
+                  ref={iconCameraRef}
+                  type="file"
+                  accept={iconAccept}
+                  capture="environment"
+                  className="sr-only"
+                  tabIndex={-1}
+                  onChange={(event) => onIconPhotoPick(event.target.files?.[0] ?? null)}
+                />
+                <input
+                  ref={iconLibraryRef}
+                  type="file"
+                  accept={iconAccept}
+                  className="sr-only"
+                  tabIndex={-1}
+                  onChange={(event) => onIconPhotoPick(event.target.files?.[0] ?? null)}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="min-h-10 w-full"
+                  disabled={iconPending}
+                  onClick={() => iconCameraRef.current?.click()}
+                >
+                  <Camera className="size-3.5" />
+                  Take photo
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="min-h-10 w-full"
+                  disabled={iconPending}
+                  onClick={() => iconLibraryRef.current?.click()}
+                >
+                  <ImagePlus className="size-3.5" />
+                  {iconPhotoUrl ? "Choose another" : "Choose from library"}
+                </Button>
+              </div>
+            ) : null}
             <div className="flex flex-wrap gap-1.5">
               {TANK_ICON_PICKER_IDS.map((id) => {
                 const selected = !iconPhotoUrl && icon === id
@@ -500,15 +539,37 @@ export function TankForm({
     </form>
   )
 
-  if (bare) return fields
+  const cropDialog = (
+    <TankIconCropDialog
+      open={Boolean(cropSrc)}
+      imageSrc={cropSrc}
+      pending={iconPending}
+      onOpenChange={(open) => {
+        if (!open) clearCropSrc()
+      }}
+      onConfirm={uploadCroppedIcon}
+    />
+  )
+
+  if (bare) {
+    return (
+      <>
+        {fields}
+        {cropDialog}
+      </>
+    )
+  }
 
   return (
-    <Card className="shadow-lg shadow-primary/5">
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>{fields}</CardContent>
-    </Card>
+    <>
+      <Card className="shadow-lg shadow-primary/5">
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </CardHeader>
+        <CardContent>{fields}</CardContent>
+      </Card>
+      {cropDialog}
+    </>
   )
 }

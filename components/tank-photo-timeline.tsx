@@ -2,12 +2,13 @@
 
 import { useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { deleteTankPhoto, setTankIconFromPhoto, uploadTankPhoto } from "@/lib/actions"
-import { prepareTankPhoto } from "@/lib/tank-photo"
+import { deleteTankPhoto, setTankIconPhoto, uploadTankPhoto } from "@/lib/actions"
+import { objectUrlFromImageUrl, prepareTankPhoto } from "@/lib/tank-photo"
 import type { Tables } from "@/lib/database.types"
 import { SubmitButton } from "@/components/submit-button"
 import { EmptyState } from "@/components/empty-state"
 import { softHaptic } from "@/components/form-success-toast"
+import { TankIconCropDialog } from "@/components/tank-icon-crop-dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -29,12 +30,21 @@ export function TankPhotoTimeline({
   const [file, setFile] = useState<File | null>(null)
   const [localPreview, setLocalPreview] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
-  const [iconPendingId, setIconPendingId] = useState<string | null>(null)
+  const [iconPending, setIconPending] = useState(false)
+  const [iconLoadingId, setIconLoadingId] = useState<string | null>(null)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
   const router = useRouter()
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
   const captionRef = useRef<HTMLInputElement>(null)
   const takenAtRef = useRef<HTMLInputElement>(null)
+
+  function clearCropSrc() {
+    setCropSrc((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return null
+    })
+  }
 
   function clearSelection() {
     setFile(null)
@@ -96,25 +106,45 @@ export function TankPhotoTimeline({
     })
   }
 
-  function useAsIcon(photoId: string) {
-    setIconPendingId(photoId)
+  function useAsIcon(photo: Tables<"tank_photos">) {
+    setIconPending(true)
+    setIconLoadingId(photo.id)
+    startTransition(async () => {
+      try {
+        const objectUrl = await objectUrlFromImageUrl(photo.public_url)
+        setCropSrc((current) => {
+          if (current) URL.revokeObjectURL(current)
+          return objectUrl
+        })
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not load photo.")
+      } finally {
+        setIconPending(false)
+        setIconLoadingId(null)
+      }
+    })
+  }
+
+  function uploadCroppedIcon(file: File) {
+    setIconPending(true)
     startTransition(async () => {
       try {
         const formData = new FormData()
         formData.set("tank_id", tankId)
-        formData.set("photo_id", photoId)
-        const result = await setTankIconFromPhoto(formData)
+        formData.set("photo", file, file.name || "tank-icon.jpg")
+        const result = await setTankIconPhoto(formData)
         if (!result?.ok) {
           toast.error(result?.error || "Could not set tank icon.")
           return
         }
+        clearCropSrc()
         softHaptic()
         toast.success("Set as tank icon", { duration: 2200, className: "tt-toast-success" })
         router.refresh()
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not set tank icon.")
       } finally {
-        setIconPendingId(null)
+        setIconPending(false)
       }
     })
   }
@@ -247,17 +277,17 @@ export function TankPhotoTimeline({
                     {format(parseISO(photo.taken_at), "MMM d, yyyy")}
                   </div>
                   {photo.caption ? <div className="line-clamp-2">{photo.caption}</div> : null}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    className="h-7 w-full gap-1 px-2 text-[11px]"
-                    disabled={pending || iconPendingId === photo.id}
-                    onClick={() => useAsIcon(photo.id)}
-                  >
-                    <Sparkles className="size-3" />
-                    {iconPendingId === photo.id ? "Setting…" : "Use as icon"}
-                  </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-7 w-full gap-1 px-2 text-[11px]"
+                      disabled={pending || iconPending}
+                      onClick={() => useAsIcon(photo)}
+                    >
+                      <Sparkles className="size-3" />
+                      {iconLoadingId === photo.id ? "Loading…" : "Use as icon"}
+                    </Button>
                 </figcaption>
                 <form action={deleteTankPhoto} className="absolute right-1.5 top-1.5">
                   <input type="hidden" name="id" value={photo.id} />
@@ -305,6 +335,16 @@ export function TankPhotoTimeline({
           </div>
         ) : null}
       </CardContent>
+
+      <TankIconCropDialog
+        open={Boolean(cropSrc)}
+        imageSrc={cropSrc}
+        pending={iconPending}
+        onOpenChange={(open) => {
+          if (!open) clearCropSrc()
+        }}
+        onConfirm={uploadCroppedIcon}
+      />
     </Card>
   )
 }

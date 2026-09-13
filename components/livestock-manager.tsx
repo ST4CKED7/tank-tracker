@@ -10,23 +10,54 @@ import {
   type Species,
   type Tank,
 } from "@/lib/bioload"
-import { suggestAdditions } from "@/lib/compatibility"
+import { compatibilityCheck } from "@/lib/compatibility"
 import type { ParameterKey } from "@/lib/parameters"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/empty-state"
 import { SubmitButton } from "@/components/submit-button"
+import { CompatibilityWarnings, guardCompatSubmit } from "@/components/compatibility-warnings"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useUnits } from "@/components/units-provider"
 import { displayLength, formatLength, formatTempRange, formatVolume, lengthLabel, volumeLabel, type UnitPrefs } from "@/lib/units"
 import { Badge } from "@/components/ui/badge"
 import { SpeciesImage } from "@/components/species-image"
 import { cn } from "@/lib/utils"
 import { staggerStyle } from "@/lib/motion"
-import { Fish } from "lucide-react"
+import { ChevronDown, Fish } from "lucide-react"
+import { LivestockAsk } from "@/components/livestock-ask"
+import { SexSelect } from "@/components/livestock-sex-select"
+
+type KindFilter = "all" | "fish" | "coral" | "invert" | "plant"
+
+const KIND_ORDER: KindFilter[] = ["fish", "coral", "invert", "plant"]
+
+function tankPanelStorageKey(tankId: string) {
+  return `tt:livestock-in-tank-expanded:${tankId}`
+}
+
+function readTankPanelExpanded(tankId: string): boolean {
+  if (typeof window === "undefined") return true
+  try {
+    const raw = localStorage.getItem(tankPanelStorageKey(tankId))
+    if (raw === "0") return false
+    if (raw === "1") return true
+  } catch {
+    /* ignore */
+  }
+  return true
+}
+
+function writeTankPanelExpanded(tankId: string, expanded: boolean) {
+  try {
+    localStorage.setItem(tankPanelStorageKey(tankId), expanded ? "1" : "0")
+  } catch {
+    /* ignore */
+  }
+}
 
 function kindBadgeClass(kind: string) {
   if (kind === "fish") return "border-teal-500/40 bg-teal-500/15 text-teal-800 dark:text-teal-200"
@@ -46,29 +77,12 @@ function speciesTempLine(species: Species, prefs: UnitPrefs) {
   return formatTempRange(species.temp_min, species.temp_max, prefs)
 }
 
-function SexSelect({
-  id,
-  defaultValue = "unknown",
-  className,
-}: {
-  id?: string
-  defaultValue?: LivestockSex
-  className?: string
-}) {
-  return (
-    <select
-      id={id}
-      name="sex"
-      defaultValue={defaultValue}
-      className={cn("h-8 rounded-md border bg-background px-2 text-sm", className)}
-    >
-      {(Object.keys(LIVESTOCK_SEX_LABELS) as LivestockSex[]).map((sex) => (
-        <option key={sex} value={sex}>
-          {LIVESTOCK_SEX_LABELS[sex]}
-        </option>
-      ))}
-    </select>
-  )
+function kindLabel(kind: KindFilter) {
+  if (kind === "all") return "All"
+  if (kind === "fish") return "Fish"
+  if (kind === "coral") return "Corals"
+  if (kind === "invert") return "Inverts"
+  return "Plants"
 }
 
 export function LivestockManager({
@@ -87,9 +101,25 @@ export function LivestockManager({
   const kindOptions = fw
     ? (["all", "fish", "invert", "plant"] as const)
     : (["all", "fish", "coral", "invert"] as const)
-  const [kind, setKind] = useState<"all" | "fish" | "coral" | "invert" | "plant">("all")
+  const [kind, setKind] = useState<KindFilter>("all")
+  const [tankKind, setTankKind] = useState<KindFilter>("all")
   const [category, setCategory] = useState<string>("all")
+  const [tankExpanded, setTankExpanded] = useState(true)
+  const [tankPrefReady, setTankPrefReady] = useState(false)
   const prefs = useUnits()
+
+  useEffect(() => {
+    setTankExpanded(readTankPanelExpanded(tank.id))
+    setTankPrefReady(true)
+  }, [tank.id])
+
+  function toggleTankExpanded() {
+    setTankExpanded((prev) => {
+      const next = !prev
+      writeTankPanelExpanded(tank.id, next)
+      return next
+    })
+  }
 
   // Categories available for the active kind, so the group picker stays relevant.
   const categoriesForKind = useMemo(() => {
@@ -122,14 +152,37 @@ export function LivestockManager({
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]))
   }, [filtered])
 
-  function selectKind(next: typeof kind) {
+  function selectKind(next: KindFilter) {
     setKind(next)
     setCategory("all")
   }
-  const suggestions = useMemo(
-    () => suggestAdditions(catalog, tank, livestock, latest).slice(0, 12),
-    [catalog, tank, livestock, latest],
-  )
+
+  const tankCounts = useMemo(() => {
+    const counts: Record<KindFilter, number> = { all: livestock.length, fish: 0, coral: 0, invert: 0, plant: 0 }
+    for (const item of livestock) {
+      const k = item.species.kind as Exclude<KindFilter, "all">
+      if (k in counts) counts[k] += 1
+    }
+    return counts
+  }, [livestock])
+
+  const tankLivestock = useMemo(() => {
+    const rows = tankKind === "all" ? livestock : livestock.filter((item) => item.species.kind === tankKind)
+    return [...rows].sort((a, b) => {
+      const ai = KIND_ORDER.indexOf(a.species.kind as KindFilter)
+      const bi = KIND_ORDER.indexOf(b.species.kind as KindFilter)
+      if (ai !== bi) return ai - bi
+      return a.species.common_name.localeCompare(b.species.common_name)
+    })
+  }, [livestock, tankKind])
+
+  const compatById = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof compatibilityCheck>>()
+    for (const species of filtered) {
+      map.set(species.id, compatibilityCheck(species, tank, livestock, latest))
+    }
+    return map
+  }, [filtered, tank, livestock, latest])
 
   const unitFields = (
     <>
@@ -140,25 +193,92 @@ export function LivestockManager({
   )
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="space-y-6">
+      <LivestockAsk tank={tank} livestock={livestock} catalog={catalog} latest={latest} />
       <Card>
-        <CardHeader>
-          <CardTitle>In the tank</CardTitle>
+        <CardHeader
+          role="button"
+          tabIndex={0}
+          onClick={toggleTankExpanded}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault()
+              toggleTankExpanded()
+            }
+          }}
+          aria-expanded={tankExpanded}
+          aria-controls="in-the-tank-panel"
+          className="cursor-pointer gap-3 select-none outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="flex min-w-0 items-center gap-2">
+              In the tank
+              {livestock.length > 0 ? (
+                <span className="text-sm font-normal text-muted-foreground tabular-nums">
+                  ({livestock.length})
+                </span>
+              ) : null}
+              <ChevronDown
+                className={cn(
+                  "size-4 shrink-0 text-muted-foreground transition-transform",
+                  tankExpanded && "rotate-180",
+                )}
+              />
+            </CardTitle>
+            {tankPrefReady && !tankExpanded && livestock.length > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                {[
+                  tankCounts.fish ? `${tankCounts.fish} fish` : null,
+                  tankCounts.coral ? `${tankCounts.coral} coral` : null,
+                  tankCounts.invert ? `${tankCounts.invert} invert` : null,
+                  tankCounts.plant ? `${tankCounts.plant} plant` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            ) : null}
+          </div>
+          {tankExpanded && livestock.length > 0 ? (
+            <div
+              className="flex flex-wrap gap-1.5"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              {kindOptions.map((option) => (
+                <Button
+                  key={`tank-${option}`}
+                  type="button"
+                  size="sm"
+                  variant={tankKind === option ? "default" : "outline"}
+                  className="h-8"
+                  onClick={() => setTankKind(option)}
+                >
+                  {kindLabel(option)}
+                  <span className="ml-1.5 tabular-nums opacity-70">{tankCounts[option]}</span>
+                </Button>
+              ))}
+            </div>
+          ) : null}
         </CardHeader>
-        <CardContent className="tt-stagger space-y-3">
+        {tankExpanded ? (
+        <CardContent id="in-the-tank-panel" className="tt-stagger space-y-3">
           {livestock.length === 0 ? (
             <EmptyState
               icon={<Fish className="size-6" />}
               title={fw ? "Nothing stocked yet" : "Your reef list is empty"}
               description={
                 fw
-                  ? "Search the catalog for fish, plants, and cleanup crew. Targets and bioload tighten once animals are on the list."
-                  : "Add fish, coral, and cleanup crew so reef-safe checks and parameter windows match what you keep."
+                  ? "Ask your tank above, or search the catalog for fish, plants, and cleanup crew."
+                  : "Ask your tank above, or add fish, coral, and cleanup crew from the catalog."
               }
               className="py-6 shadow-none"
             />
           ) : null}
-          {livestock.map((item, index) => {
+          {livestock.length > 0 && tankLivestock.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No {kindLabel(tankKind).toLowerCase()} in this tank yet.</p>
+          ) : null}
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {tankLivestock.map((item, index) => {
             const lengthInches =
               item.current_length_inches != null
                 ? Number(item.current_length_inches)
@@ -309,121 +429,12 @@ export function LivestockManager({
               </div>
             )
           })}
+          </div>
         </CardContent>
+        ) : null}
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Suggested additions</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {suggestions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nothing currently passes tank size, compatibility, parameters, and bioload headroom.</p>
-          ) : null}
-          {suggestions.map((item) => (
-            <form key={item.species.id} action={addLivestock} className="rounded-xl border border-primary/10 bg-background/40 p-3">
-              <input type="hidden" name="tank_id" value={tank.id} />
-              <input type="hidden" name="species_id" value={item.species.id} />
-              {unitFields}
-              <div className="flex min-w-0 items-start gap-3">
-                <SpeciesImage
-                  src={item.species.image_url}
-                  alt={item.species.common_name}
-                  speciesId={item.species.id}
-                  commonName={item.species.common_name}
-                  scientificName={item.species.scientific_name}
-                  kind={item.species.kind}
-                  size="sm"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium">{item.species.common_name}</div>
-                  <p className="text-sm text-muted-foreground">{item.reasons[0]}</p>
-                  {speciesTempLine(item.species, prefs) ? (
-                    <p className="text-xs text-muted-foreground">
-                      Recommended temp {speciesTempLine(item.species, prefs)}
-                    </p>
-                  ) : null}
-                  {item.projectedBioloadPercent != null ? (
-                    <p className="text-xs text-muted-foreground">
-                      Would put bioload at {Math.round(item.projectedBioloadPercent)}%
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap items-end gap-2">
-                <div>
-                  <Label htmlFor={`sug-name-${item.species.id}`}>
-                    {item.species.kind === "fish" ? "Fish name" : "Name"}
-                  </Label>
-                  <Input
-                    id={`sug-name-${item.species.id}`}
-                    name="nickname"
-                    placeholder="Optional"
-                    className="w-36"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`sug-qty-${item.species.id}`}>Qty</Label>
-                  <Input
-                    id={`sug-qty-${item.species.id}`}
-                    name="quantity"
-                    type="number"
-                    min={1}
-                    defaultValue={1}
-                    className="w-20"
-                  />
-                </div>
-                {item.species.kind === "fish" || item.species.kind === "invert" ? (
-                  <div>
-                    <Label htmlFor={`sug-sex-${item.species.id}`}>Sex</Label>
-                    <SexSelect id={`sug-sex-${item.species.id}`} defaultValue="unknown" />
-                  </div>
-                ) : null}
-                {item.species.kind === "fish" ? (
-                  <div>
-                    <Label htmlFor={`sug-len-${item.species.id}`}>Size ({lengthLabel(prefs)})</Label>
-                    <Input
-                      id={`sug-len-${item.species.id}`}
-                      name="current_length"
-                      type="number"
-                      step="0.1"
-                      min={0}
-                      className="w-28"
-                      defaultValue={
-                        item.species.adult_length_inches != null
-                          ? displayLength(Number(item.species.adult_length_inches), prefs)
-                          : undefined
-                      }
-                    />
-                  </div>
-                ) : null}
-                {item.species.kind === "coral" ? (
-                  <div>
-                    <Label htmlFor={`sug-coral-${item.species.id}`}>Size</Label>
-                    <select
-                      id={`sug-coral-${item.species.id}`}
-                      name="coral_size"
-                      defaultValue="frag"
-                      className="h-8 rounded-md border bg-background px-2 text-sm"
-                    >
-                      {(Object.keys(CORAL_SIZE_LABELS) as CoralSize[]).map((size) => (
-                        <option key={size} value={size}>
-                          {CORAL_SIZE_LABELS[size]}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : null}
-                <SubmitButton size="sm" pendingLabel="Adding…" successMessage="Added to tank">
-                  Add
-                </SubmitButton>
-              </div>
-            </form>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card className="lg:col-span-2">
         <CardHeader>
           <CardTitle>Catalog</CardTitle>
         </CardHeader>
@@ -480,16 +491,24 @@ export function LivestockManager({
                   <div className="h-px flex-1 bg-primary/10" />
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
-                  {speciesInGroup.map((species) => (
+                  {speciesInGroup.map((species) => {
+                    const report = compatById.get(species.id) ?? {
+                      severity: "ok" as const,
+                      warnings: [],
+                    }
+                    return (
               <form
                 key={species.id}
                 action={addLivestock}
+                onSubmit={(event) => guardCompatSubmit(report.severity, event)}
                 className={cn(
                   "rounded-xl border border-primary/10 bg-card/70 p-3 text-sm shadow-sm border-l-4",
                   species.kind === "fish" && "border-l-teal-500",
                   species.kind === "coral" && "border-l-orange-400",
                   species.kind === "invert" && "border-l-violet-500",
                   species.kind === "plant" && "border-l-emerald-500",
+                  report.severity === "block" && "border-destructive/30",
+                  report.severity === "caution" && "border-amber-500/30",
                 )}
               >
                 <input type="hidden" name="tank_id" value={tank.id} />
@@ -523,6 +542,7 @@ export function LivestockManager({
                     </p>
                   </div>
                 </div>
+                <CompatibilityWarnings report={report} className="mt-2" />
                 <div className="mt-2 flex flex-wrap items-end gap-2">
                   <div>
                     <Label htmlFor={`name-${species.id}`}>
@@ -580,12 +600,18 @@ export function LivestockManager({
                       </select>
                     </div>
                   ) : null}
-                  <SubmitButton size="sm" pendingLabel="Adding…" successMessage="Added to tank">
-                    Add
+                  <SubmitButton
+                    size="sm"
+                    variant={report.severity === "block" ? "destructive" : "default"}
+                    pendingLabel="Adding…"
+                    successMessage="Added to tank"
+                  >
+                    {report.severity === "block" ? "Add anyway" : "Add"}
                   </SubmitButton>
                 </div>
               </form>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             ))}

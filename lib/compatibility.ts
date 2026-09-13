@@ -54,6 +54,15 @@ export type Suggestion = {
   projectedBioloadPercent?: number
 }
 
+export type CompatSeverity = "ok" | "caution" | "block"
+
+export type CompatibilityReport = {
+  severity: CompatSeverity
+  /** Human-readable issues for this species in the current tank. */
+  warnings: string[]
+  projectedBioloadPercent?: number
+}
+
 function tagsOf(livestock: LivestockRow[]) {
   return new Set(livestock.flatMap((item) => item.species.aggression_tags ?? []))
 }
@@ -62,15 +71,66 @@ function kindsOf(livestock: LivestockRow[]) {
   return new Set(livestock.map((item) => item.species.kind))
 }
 
+/** Soft (caution) vs hard (block) classification for UI banners / confirm gates. */
+function severityForReasons(reasons: string[]): CompatSeverity {
+  if (reasons.length === 0) return "ok"
+  const block = reasons.some(
+    (reason) =>
+      reason.startsWith("Needs a larger tank") ||
+      reason.startsWith("Not reef-safe") ||
+      reason.startsWith("This species is for") ||
+      reason.includes("Would put estimated bioload") ||
+      reason.includes("Aggressive with peaceful") ||
+      reason.includes("May eat shrimp, crabs, or snails") ||
+      reason.includes("may eat this invert") ||
+      reason.includes("Known to nip corals") ||
+      reason.includes("coral nipper") ||
+      reason.includes("range does not overlap"),
+  )
+  return block ? "block" : "caution"
+}
+
+function reefSafeCautionReason(candidate: Species): string {
+  const tags = new Set(candidate.aggression_tags ?? [])
+  const name = `${candidate.common_name} ${candidate.notes ?? ""}`.toLowerCase()
+  const isAnemone =
+    candidate.kind === "coral" &&
+    (/anemone|entacmaea|heteractis|stichodactyla|macrodactyla|condylactis/.test(name) ||
+      (candidate.category ?? "").toLowerCase().includes("anemone"))
+
+  if (isAnemone) {
+    return "Reef-safe with caution — can sting nearby corals and may wander until it settles"
+  }
+  if (candidate.kind === "coral") {
+    return "Reef-safe with caution — may sting or crowd neighboring corals; give spacing"
+  }
+  if (candidate.kind === "invert") {
+    if (tags.has("eats_inverts") || /crab|mantis/.test(name)) {
+      return "Reef-safe with caution — may bother or prey on other inverts"
+    }
+    return "Reef-safe with caution — monitor placement and how it interacts with corals"
+  }
+
+  // Fish / other
+  const bits: string[] = []
+  if (tags.has("nips_corals")) bits.push("may nip corals")
+  if (tags.has("eats_inverts") || tags.has("not_with_shrimp")) bits.push("may bother or eat inverts")
+  if (bits.length > 0) {
+    return `Reef-safe with caution — ${bits.join("; ")}`
+  }
+  return "Reef-safe with caution — keep an eye on coral and invert neighbors"
+}
+
 export function evaluateSpecies(
   candidate: Species,
   tank: Tank,
   livestock: LivestockRow[],
   currentParams: Partial<Record<ParameterKey, number>>,
+  options?: { allowDuplicate?: boolean },
 ): Suggestion {
   const reasons: string[] = []
   const already = livestock.some((item) => item.species_id === candidate.id)
-  if (already) {
+  if (already && !options?.allowDuplicate) {
     return { species: candidate, ok: false, reasons: ["Already in this tank"] }
   }
 
@@ -83,7 +143,7 @@ export function evaluateSpecies(
     if (reef && candidate.reef_safe === "no") {
       reasons.push(`Not reef-safe for a ${tankProfile(tank.tank_type).label.toLowerCase()} tank`)
     } else if (reef && candidate.reef_safe === "caution") {
-      reasons.push("Reef-safe with caution — may nip corals or bother inverts")
+      reasons.push(reefSafeCautionReason(candidate))
     }
   }
 
@@ -117,6 +177,21 @@ export function evaluateSpecies(
   }
   if (candidate.temperament === "aggressive" && livestock.some((i) => i.species.temperament === "peaceful" && i.species.kind === "fish")) {
     reasons.push("Aggressive with peaceful fish already stocked")
+  }
+  if (
+    candidate.temperament === "semi_aggressive" &&
+    livestock.some((i) => i.species.temperament === "peaceful" && i.species.kind === "fish")
+  ) {
+    reasons.push("Semi-aggressive — may bully peaceful fish already stocked")
+  }
+  if (
+    candidate.temperament === "peaceful" &&
+    livestock.some((i) => i.species.temperament === "aggressive" && i.species.kind === "fish")
+  ) {
+    reasons.push("Peaceful species joining an aggressive fish already in the tank")
+  }
+  if (candTags.has("territorial") && livestock.some((i) => i.species.aggression_tags.includes("territorial"))) {
+    reasons.push("Territorial — may clash with other territorial livestock already stocked")
   }
 
   const ranges = intersectRanges(livestock)
@@ -155,12 +230,35 @@ export function evaluateSpecies(
   const hardFails = reasons.filter(
     (reason) =>
       !reason.startsWith("Reef-safe with caution") &&
-      !reason.includes("outside this species"),
+      !reason.includes("outside this species") &&
+      !reason.startsWith("Semi-aggressive") &&
+      !reason.startsWith("Territorial") &&
+      !reason.startsWith("Peaceful species joining"),
   )
   const ok = hardFails.length === 0
   if (ok) reasons.unshift("Fits tank size, compatibility rules, and remaining bioload headroom")
 
   return { species: candidate, ok, reasons, projectedBioloadPercent }
+}
+
+/** Warnings for the add-to-tank UI (allows another of a species already stocked). */
+export function compatibilityCheck(
+  candidate: Species,
+  tank: Tank,
+  livestock: LivestockRow[],
+  currentParams: Partial<Record<ParameterKey, number>>,
+): CompatibilityReport {
+  const suggestion = evaluateSpecies(candidate, tank, livestock, currentParams, {
+    allowDuplicate: true,
+  })
+  const warnings = suggestion.reasons.filter(
+    (reason) => !reason.startsWith("Fits tank size, compatibility"),
+  )
+  return {
+    severity: severityForReasons(warnings),
+    warnings,
+    projectedBioloadPercent: suggestion.projectedBioloadPercent,
+  }
 }
 
 export function suggestAdditions(

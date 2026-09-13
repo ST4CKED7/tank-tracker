@@ -39,8 +39,8 @@ export default async function LivestockPage() {
         title={fw ? "Freshwater livestock" : "Livestock"}
         description={
           fw
-            ? "Suggestions use tank size, temperament tags, parameter overlap, bioload headroom, and cleanup-crew gaps."
-            : "Suggestions are rule-based: tank size, reef-safety, aggression tags, parameter overlap, bioload, and cleanup crew."
+            ? "Ask questions like “good next fish” or “algae eater.” Answers use tank size, temperament, parameter overlap, bioload, and cleanup gaps. Catalog cards still warn before a poor mix."
+            : "Ask questions like “good sand cleaner” or “next fish.” Answers use tank size, reef-safety, aggression tags, bioload, and cleanup crew. Catalog cards still warn before a poor mix."
         }
       />
       <div className="grid gap-6 lg:grid-cols-2">

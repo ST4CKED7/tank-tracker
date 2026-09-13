@@ -100,17 +100,34 @@ export function TankIconGlyph({
 export function TankIconBadge({
   icon,
   color,
+  photoUrl,
   waterType,
   className,
   iconClassName,
 }: {
   icon?: string | null
   color?: string | null
+  /** When set, shows a cropped photo instead of the Lucide glyph. */
+  photoUrl?: string | null
   /** Used only when color is missing / invalid — emerald for FW, primary teal otherwise. */
   waterType?: string | null
   className?: string
   iconClassName?: string
 }) {
+  if (photoUrl) {
+    return (
+      <span
+        className={cn(
+          "relative flex size-8 shrink-0 overflow-hidden rounded-xl ring-1 ring-black/10",
+          className,
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={photoUrl} alt="" className="size-full object-cover" />
+      </span>
+    )
+  }
+
   const swatch =
     color != null && String(color) !== ""
       ? tankIconSwatch(color)

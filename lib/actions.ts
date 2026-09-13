@@ -45,8 +45,8 @@ function revalidateAppPaths(...paths: string[]) {
 }
 
 /** Tank identity / prefs changed — refresh shell consumers. */
-function revalidateTankShell() {
-  revalidateAppPaths("/", "/settings", "/livestock", "/tests", "/dosing", "/equipment", "/charts", "/cycle")
+  function revalidateTankShell() {
+  revalidateAppPaths("/", "/settings", "/livestock", "/tests", "/dosing", "/equipment", "/charts", "/cycle", "/photos")
 }
 
 export async function signOut() {
@@ -614,7 +614,100 @@ export async function uploadTankPhoto(formData: FormData) {
     return { ok: false as const, error: error.message || "Could not save photo." }
   }
 
-  revalidateAppPaths("/")
+  revalidateAppPaths("/photos", "/")
+  return { ok: true as const }
+}
+
+function tankIconStoragePath(userId: string, tankId: string) {
+  return `${userId}/${tankId}/icon.jpg`
+}
+
+async function writeTankIconPhoto(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  tankId: string,
+  blob: Blob,
+) {
+  const path = tankIconStoragePath(userId, tankId)
+  const mime = blob.type || "image/jpeg"
+  const { error: uploadError } = await supabase.storage.from("tank-photos").upload(path, blob, {
+    contentType: mime,
+    upsert: true,
+  })
+  if (uploadError) return { ok: false as const, error: uploadError.message || "Upload failed." }
+
+  const { data: publicData } = supabase.storage.from("tank-photos").getPublicUrl(path)
+  // Cache-bust so the switcher updates after replacing the same storage path.
+  const publicUrl = `${publicData.publicUrl}?v=${Date.now()}`
+  const { error } = await supabase
+    .from("tanks")
+    .update({ icon_photo_url: publicUrl })
+    .eq("id", tankId)
+    .eq("user_id", userId)
+  if (error) return { ok: false as const, error: error.message || "Could not save icon." }
+
+  revalidateTankShell()
+  return { ok: true as const, url: publicUrl }
+}
+
+export async function setTankIconPhoto(formData: FormData) {
+  const { supabase, userId } = await requireUser()
+  const tankId = String(formData.get("tank_id") || "")
+  const raw = formData.get("photo")
+  if (!tankId || !(raw instanceof Blob) || raw.size === 0) {
+    return { ok: false as const, error: "Choose a photo first." }
+  }
+  if (raw.size > 7_500_000) {
+    return { ok: false as const, error: "Photo is too large. Try a smaller shot." }
+  }
+
+  const { data: owned } = await supabase.from("tanks").select("id").eq("id", tankId).eq("user_id", userId).maybeSingle()
+  if (!owned) return { ok: false as const, error: "Tank not found." }
+
+  return writeTankIconPhoto(supabase, userId, tankId, raw)
+}
+
+export async function setTankIconFromPhoto(formData: FormData) {
+  const { supabase, userId } = await requireUser()
+  const tankId = String(formData.get("tank_id") || "")
+  const photoId = String(formData.get("photo_id") || "")
+  if (!tankId || !photoId) return { ok: false as const, error: "Missing photo." }
+
+  const { data: photo } = await supabase
+    .from("tank_photos")
+    .select("id, storage_path, tank_id")
+    .eq("id", photoId)
+    .eq("user_id", userId)
+    .maybeSingle()
+  if (!photo || photo.tank_id !== tankId) {
+    return { ok: false as const, error: "Photo not found." }
+  }
+
+  const { data: file, error: downloadError } = await supabase.storage.from("tank-photos").download(photo.storage_path)
+  if (downloadError || !file) {
+    return { ok: false as const, error: downloadError?.message || "Could not read photo." }
+  }
+
+  return writeTankIconPhoto(supabase, userId, tankId, file)
+}
+
+export async function clearTankIconPhoto(formData: FormData) {
+  const { supabase, userId } = await requireUser()
+  const tankId = String(formData.get("tank_id") || "")
+  if (!tankId) return { ok: false as const, error: "Tank not found." }
+
+  const { data: owned } = await supabase.from("tanks").select("id").eq("id", tankId).eq("user_id", userId).maybeSingle()
+  if (!owned) return { ok: false as const, error: "Tank not found." }
+
+  await supabase.storage.from("tank-photos").remove([tankIconStoragePath(userId, tankId)])
+  const { error } = await supabase
+    .from("tanks")
+    .update({ icon_photo_url: null })
+    .eq("id", tankId)
+    .eq("user_id", userId)
+  if (error) return { ok: false as const, error: error.message || "Could not clear icon." }
+
+  revalidateTankShell()
   return { ok: true as const }
 }
 
@@ -634,7 +727,15 @@ export async function deleteTankPhoto(formData: FormData) {
   await supabase.storage.from("tank-photos").remove([photo.storage_path])
   const { error } = await supabase.from("tank_photos").delete().eq("id", id)
   if (error) throw error
-  revalidateAppPaths("/")
+
+  // If this photo was used as the tank icon URL (legacy / non-copied), clear it.
+  await supabase
+    .from("tanks")
+    .update({ icon_photo_url: null })
+    .eq("user_id", userId)
+    .like("icon_photo_url", `%${photo.storage_path}%`)
+
+  revalidateAppPaths("/photos", "/")
 }
 
 export async function upsertEquipment(formData: FormData) {

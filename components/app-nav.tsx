@@ -11,6 +11,7 @@ import { TankSwitcher, type SwitcherTank } from "@/components/tank-switcher"
 import { cn } from "@/lib/utils"
 import {
   Beaker,
+  Camera,
   ChartLine,
   Droplets,
   Fish,
@@ -29,6 +30,7 @@ const LINKS = [
   { href: "/charts", label: "Charts", icon: ChartLine },
   { href: "/cycle", label: "Cycle", icon: Beaker },
   { href: "/livestock", label: "Livestock", icon: Fish },
+  { href: "/photos", label: "Photos", icon: Camera },
   { href: "/dosing", label: "Dosing", icon: Droplets },
   { href: "/equipment", label: "Gear", icon: Wrench },
   { href: "/settings", label: "Settings", icon: Settings },

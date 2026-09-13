@@ -301,6 +301,7 @@ export type Database = {
           favorite_test_kits: string[]
           icon: string
           icon_color: string
+          icon_photo_url: string | null
           color_theme: string
           parameter_targets: Record<string, { min: number; max: number }>
         }
@@ -326,6 +327,7 @@ export type Database = {
           favorite_test_kits?: string[]
           icon?: string
           icon_color?: string
+          icon_photo_url?: string | null
           color_theme?: string
           parameter_targets?: Record<string, { min: number; max: number }>
         }

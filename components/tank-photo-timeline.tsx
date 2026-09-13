@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { deleteTankPhoto, uploadTankPhoto } from "@/lib/actions"
+import { deleteTankPhoto, setTankIconFromPhoto, uploadTankPhoto } from "@/lib/actions"
 import { prepareTankPhoto } from "@/lib/tank-photo"
 import type { Tables } from "@/lib/database.types"
 import { SubmitButton } from "@/components/submit-button"
@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { format, parseISO } from "date-fns"
-import { Camera, ImagePlus, X } from "lucide-react"
+import { Camera, ImagePlus, Sparkles, X } from "lucide-react"
 import { toast } from "sonner"
 
 const ACCEPT = "image/*,image/jpeg,image/png,image/webp,image/heic,image/heif"
@@ -29,6 +29,7 @@ export function TankPhotoTimeline({
   const [file, setFile] = useState<File | null>(null)
   const [localPreview, setLocalPreview] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  const [iconPendingId, setIconPendingId] = useState<string | null>(null)
   const router = useRouter()
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
@@ -86,9 +87,34 @@ export function TankPhotoTimeline({
         router.refresh()
       } catch (error) {
         const message = error instanceof Error ? error.message : "Could not upload photo."
-        toast.error(message.includes("Body exceeded") || message.includes("too large")
-          ? "Photo is too large for upload. Try a smaller shot."
-          : message)
+        toast.error(
+          message.includes("Body exceeded") || message.includes("too large")
+            ? "Photo is too large for upload. Try a smaller shot."
+            : message,
+        )
+      }
+    })
+  }
+
+  function useAsIcon(photoId: string) {
+    setIconPendingId(photoId)
+    startTransition(async () => {
+      try {
+        const formData = new FormData()
+        formData.set("tank_id", tankId)
+        formData.set("photo_id", photoId)
+        const result = await setTankIconFromPhoto(formData)
+        if (!result?.ok) {
+          toast.error(result?.error || "Could not set tank icon.")
+          return
+        }
+        softHaptic()
+        toast.success("Set as tank icon", { duration: 2200, className: "tt-toast-success" })
+        router.refresh()
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not set tank icon.")
+      } finally {
+        setIconPendingId(null)
       }
     })
   }
@@ -98,11 +124,11 @@ export function TankPhotoTimeline({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Camera className="size-4 text-primary" />
-          Tank photos
+          Add a photo
         </CardTitle>
         <CardDescription>
-          Build a timeline of aquascape, algae, and livestock changes. Newest first. On your phone, use Take photo to
-          open the camera.
+          Newest first. On your phone, Take photo opens the camera; Choose from library picks an existing shot.
+          Any shot can also be used as the tank icon in the header switcher.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -216,11 +242,22 @@ export function TankPhotoTimeline({
                     className="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]"
                   />
                 </button>
-                <figcaption className="space-y-0.5 px-2 py-1.5 text-xs">
+                <figcaption className="space-y-1 px-2 py-1.5 text-xs">
                   <div className="font-medium text-muted-foreground">
                     {format(parseISO(photo.taken_at), "MMM d, yyyy")}
                   </div>
                   {photo.caption ? <div className="line-clamp-2">{photo.caption}</div> : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="h-7 w-full gap-1 px-2 text-[11px]"
+                    disabled={pending || iconPendingId === photo.id}
+                    onClick={() => useAsIcon(photo.id)}
+                  >
+                    <Sparkles className="size-3" />
+                    {iconPendingId === photo.id ? "Setting…" : "Use as icon"}
+                  </Button>
                 </figcaption>
                 <form action={deleteTankPhoto} className="absolute right-1.5 top-1.5">
                   <input type="hidden" name="id" value={photo.id} />

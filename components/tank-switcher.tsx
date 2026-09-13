@@ -13,6 +13,7 @@ import { ChevronDown } from "lucide-react"
 export type SwitcherTank = Pick<Tank, "id" | "name" | "gallons" | "water_type"> & {
   icon?: string | null
   icon_color?: string | null
+  icon_photo_url?: string | null
   lastTestAt?: string | null
 }
 
@@ -76,7 +77,12 @@ export function TankSwitcher({
           pending && "opacity-70",
         )}
       >
-        <TankIconBadge icon={active.icon} color={active.icon_color} waterType={active.water_type} />
+        <TankIconBadge
+          icon={active.icon}
+          color={active.icon_color}
+          photoUrl={active.icon_photo_url}
+          waterType={active.water_type}
+        />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium leading-tight">{active.name}</span>
           <span className="block truncate text-[11px] text-muted-foreground">
@@ -105,7 +111,12 @@ export function TankSwitcher({
                     selected ? "bg-primary/15" : "hover:bg-muted/70",
                   )}
                 >
-                  <TankIconBadge icon={tank.icon} color={tank.icon_color} waterType={tank.water_type} />
+                  <TankIconBadge
+                    icon={tank.icon}
+                    color={tank.icon_color}
+                    photoUrl={tank.icon_photo_url}
+                    waterType={tank.water_type}
+                  />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{tank.name}</span>
                     <span className="block truncate text-[11px] text-muted-foreground">

@@ -1,9 +1,10 @@
 "use client"
 
-import { upsertTank } from "@/lib/actions"
+import { clearTankIconPhoto, setTankIconPhoto, upsertTank } from "@/lib/actions"
 import type { Tank } from "@/lib/bioload"
 import { SubmitButton } from "@/components/submit-button"
 import {
+  TankIconBadge,
   TankIconGlyph,
   TANK_ICON_PICKER_IDS,
   TANK_ICON_LABELS,
@@ -12,19 +13,23 @@ import {
   parseTankIcon,
   parseTankIconColor,
 } from "@/components/tank-icon"
+import { softHaptic } from "@/components/form-success-toast"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SUMP_MEDIA_OPTIONS, type SumpMediaId } from "@/lib/sump-media"
+import { prepareTankPhoto } from "@/lib/tank-photo"
 import { defaultTankType, profilesForWater } from "@/lib/tank-profiles"
 import { TANK_THEME_IDS, TANK_THEMES, parseTankTheme } from "@/lib/tank-themes"
 import { defaultTimeZone, timeZoneGroups } from "@/lib/timezones"
 import { displayVolume, unitPrefsFromTank, volumeLabel, type VolumeUnit } from "@/lib/units"
 import { useUnits } from "@/components/units-provider"
 import { cn } from "@/lib/utils"
-import { ChevronDown } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { ChevronDown, ImagePlus, X } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { toast } from "sonner"
 
 function initialSumpMedia(tank: Tank | null): SumpMediaId[] {
   if (!tank?.sump_media?.length) return []
@@ -54,8 +59,54 @@ export function TankForm({
   const [sumpMedia, setSumpMedia] = useState<SumpMediaId[]>(() => initialSumpMedia(tank))
   const [icon, setIcon] = useState(() => parseTankIcon(tank?.icon))
   const [iconColor, setIconColor] = useState(() => parseTankIconColor(tank?.icon_color))
+  const [iconPhotoUrl, setIconPhotoUrl] = useState(() => tank?.icon_photo_url ?? null)
   const [colorTheme, setColorTheme] = useState(() => parseTankTheme(tank?.color_theme))
   const [showMore, setShowMore] = useState(false)
+  const [iconPending, startIconTransition] = useTransition()
+  const iconFileRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
+
+  function selectGlyph(id: typeof icon) {
+    setIcon(id)
+    if (!tank?.id || !iconPhotoUrl) return
+    startIconTransition(async () => {
+      const fd = new FormData()
+      fd.set("tank_id", tank.id)
+      const result = await clearTankIconPhoto(fd)
+      if (!result?.ok) {
+        toast.error(result?.error || "Could not clear photo icon.")
+        return
+      }
+      setIconPhotoUrl(null)
+      softHaptic()
+      router.refresh()
+    })
+  }
+
+  function onIconPhotoPick(file: File | null) {
+    if (!tank?.id || !file) return
+    startIconTransition(async () => {
+      try {
+        const prepared = await prepareTankPhoto(file, 512, 0.85)
+        const fd = new FormData()
+        fd.set("tank_id", tank.id)
+        fd.set("photo", prepared, prepared.name || "tank-icon.jpg")
+        const result = await setTankIconPhoto(fd)
+        if (!result?.ok) {
+          toast.error(result?.error || "Could not set photo icon.")
+          return
+        }
+        setIconPhotoUrl(result.url)
+        softHaptic()
+        toast.success("Tank icon updated", { duration: 2200, className: "tt-toast-success" })
+        router.refresh()
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not set photo icon.")
+      } finally {
+        if (iconFileRef.current) iconFileRef.current.value = ""
+      }
+    })
+  }
   const volumeDefault = tank ? displayVolume(Number(tank.gallons), volumeUnit) : volumeUnit === "L" ? 150 : 40
   const sumpVolumeDefault = tank?.has_sump
     ? displayVolume(Number(tank.sump_gallons), volumeUnit)
@@ -250,9 +301,61 @@ export function TankForm({
 
           <div className="space-y-1.5 sm:col-span-2">
             <Label>Icon</Label>
+            <div className="flex items-center gap-3 rounded-xl border border-primary/10 bg-muted/20 px-3 py-2.5">
+              <TankIconBadge
+                icon={icon}
+                color={iconColor}
+                photoUrl={iconPhotoUrl}
+                waterType={waterType}
+                className="size-11 rounded-2xl"
+                iconClassName="size-5"
+              />
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <p className="text-sm font-medium">{iconPhotoUrl ? "Custom photo" : TANK_ICON_LABELS[icon]}</p>
+                <p className="text-xs text-muted-foreground">
+                  {tank?.id
+                    ? "Use a photo or pick a glyph for the tank switcher."
+                    : "Save the tank first to upload a custom photo icon."}
+                </p>
+              </div>
+              {tank?.id ? (
+                <div className="flex shrink-0 flex-wrap gap-1.5">
+                  <input
+                    ref={iconFileRef}
+                    type="file"
+                    accept="image/*,image/jpeg,image/png,image/webp,image/heic,image/heif"
+                    className="sr-only"
+                    tabIndex={-1}
+                    onChange={(event) => onIconPhotoPick(event.target.files?.[0] ?? null)}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={iconPending}
+                    onClick={() => iconFileRef.current?.click()}
+                  >
+                    <ImagePlus className="size-3.5" />
+                    {iconPhotoUrl ? "Change" : "Photo"}
+                  </Button>
+                  {iconPhotoUrl ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={iconPending}
+                      onClick={() => selectGlyph(icon)}
+                    >
+                      <X className="size-3.5" />
+                      Clear
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
             <div className="flex flex-wrap gap-1.5">
               {TANK_ICON_PICKER_IDS.map((id) => {
-                const selected = icon === id
+                const selected = !iconPhotoUrl && icon === id
                 return (
                   <button
                     key={id}
@@ -260,7 +363,8 @@ export function TankForm({
                     title={TANK_ICON_LABELS[id]}
                     aria-label={TANK_ICON_LABELS[id]}
                     aria-pressed={selected}
-                    onClick={() => setIcon(id)}
+                    disabled={iconPending}
+                    onClick={() => selectGlyph(id)}
                     className={cn(
                       "flex size-8 items-center justify-center rounded-lg border transition-colors",
                       selected
@@ -274,27 +378,29 @@ export function TankForm({
                 )
               })}
             </div>
-            <div className="flex flex-wrap gap-1.5 pt-0.5">
-              {TANK_ICON_COLOR_IDS.map((id) => {
-                const selected = iconColor === id
-                const { label, swatch } = TANK_ICON_COLORS[id]
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    title={label}
-                    aria-label={label}
-                    aria-pressed={selected}
-                    onClick={() => setIconColor(id)}
-                    className={cn(
-                      "size-6 rounded-full border-2 transition-transform",
-                      selected ? "scale-110 border-foreground" : "border-transparent hover:scale-105",
-                    )}
-                    style={{ backgroundColor: swatch }}
-                  />
-                )
-              })}
-            </div>
+            {!iconPhotoUrl ? (
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {TANK_ICON_COLOR_IDS.map((id) => {
+                  const selected = iconColor === id
+                  const { label, swatch } = TANK_ICON_COLORS[id]
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      title={label}
+                      aria-label={label}
+                      aria-pressed={selected}
+                      onClick={() => setIconColor(id)}
+                      className={cn(
+                        "size-6 rounded-full border-2 transition-transform",
+                        selected ? "scale-110 border-foreground" : "border-transparent hover:scale-105",
+                      )}
+                      style={{ backgroundColor: swatch }}
+                    />
+                  )
+                })}
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-3 rounded-xl border border-primary/10 bg-muted/20 p-3 sm:col-span-2">

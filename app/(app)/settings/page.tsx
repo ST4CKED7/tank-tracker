@@ -54,7 +54,12 @@ export default async function SettingsPage() {
                   )}
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <TankIconBadge icon={item.icon} color={item.icon_color} waterType={item.water_type} />
+                    <TankIconBadge
+                      icon={item.icon}
+                      color={item.icon_color}
+                      photoUrl={item.icon_photo_url}
+                      waterType={item.water_type}
+                    />
                     <div className="min-w-0">
                       <div className="font-medium">
                         {item.name}

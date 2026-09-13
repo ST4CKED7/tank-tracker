@@ -7,7 +7,6 @@ import { PullToRefresh } from "@/components/pull-to-refresh"
 import { ParameterTargetsPanel } from "@/components/parameter-targets-panel"
 import { RemindersPanel } from "@/components/reminders-panel"
 import { TankForm } from "@/components/tank-form"
-import { TankPhotoTimeline } from "@/components/tank-photo-timeline"
 import { detectAnomalies } from "@/lib/anomalies"
 import { nitrateRisingDespiteChanges } from "@/lib/bioload"
 import { isFreshwater } from "@/lib/parameters"
@@ -29,7 +28,6 @@ export default async function HomePage() {
     doseSchedules: true,
     equipment: true,
     catalog: false,
-    photos: 24,
   })
   if (!data.tank) {
     return (
@@ -207,8 +205,6 @@ export default async function HomePage() {
         )}
 
         {!promoteWaterChange ? waterChangePanel : null}
-
-        <TankPhotoTimeline tankId={data.tank.id} photos={data.photos} />
 
         <ParameterTargetsPanel tank={data.tank} livestock={data.livestock} />
       </div>

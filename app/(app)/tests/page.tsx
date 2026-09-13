@@ -1,6 +1,7 @@
 import { EmptyState } from "@/components/empty-state"
 import { TestAdvicePanel } from "@/components/test-advice-panel"
 import { TestLogger } from "@/components/test-logger"
+import { ParameterRemindersPanel } from "@/components/parameter-reminders-panel"
 import { PageHero } from "@/components/page-hero"
 import { PullToRefresh } from "@/components/pull-to-refresh"
 import { getDashboardData } from "@/lib/queries"
@@ -16,9 +17,11 @@ export default async function TestsPage() {
     doses: false,
     equipment: false,
     catalog: false,
+    parameterReminders: true,
   })
   if (!data.tank) return <TankForm tank={null} />
   const fw = isFreshwater(data.tank.water_type)
+  const waterType = data.tank.water_type === "freshwater" ? "freshwater" : "saltwater"
   const hasTests = Object.keys(data.latest).length > 0
   return (
     <PullToRefresh>
@@ -53,9 +56,14 @@ export default async function TestsPage() {
         )}
         <TestLogger
           tankId={data.tank.id}
-          waterType={data.tank.water_type === "freshwater" ? "freshwater" : "saltwater"}
+          waterType={waterType}
           favoriteKitIds={data.tank.favorite_test_kits}
           defaultKitId={data.tank.default_test_kit}
+        />
+        <ParameterRemindersPanel
+          tankId={data.tank.id}
+          waterType={waterType}
+          reminders={data.parameterReminders}
         />
       </div>
     </PullToRefresh>

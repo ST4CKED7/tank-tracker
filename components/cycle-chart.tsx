@@ -3,6 +3,7 @@
 import { format, parseISO } from "date-fns"
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import type { Tables } from "@/lib/database.types"
+import { chartTooltipStyle } from "@/lib/chart-theme"
 
 export function CycleChart({ tests }: { tests: Tables<"test_logs">[] }) {
   const byDay = new Map<string, { label: string; ammonia?: number; nitrite?: number; nitrate?: number }>()
@@ -21,11 +22,11 @@ export function CycleChart({ tests }: { tests: Tables<"test_logs">[] }) {
           <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.15} />
           <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={28} interval="preserveStartEnd" />
           <YAxis width={40} tick={{ fontSize: 11 }} />
-          <Tooltip />
+          <Tooltip {...chartTooltipStyle} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Line type="monotone" dataKey="ammonia" stroke="#f59e0b" strokeWidth={2} />
-          <Line type="monotone" dataKey="nitrite" stroke="#f43f5e" strokeWidth={2} />
-          <Line type="monotone" dataKey="nitrate" stroke="#14b8a6" strokeWidth={2} />
+          <Line type="monotone" dataKey="ammonia" stroke="var(--chart-2)" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="nitrite" stroke="var(--destructive)" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="nitrate" stroke="var(--chart-1)" strokeWidth={2} dot={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>

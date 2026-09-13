@@ -20,9 +20,11 @@ export type SwitcherTank = Pick<Tank, "id" | "name" | "gallons" | "water_type"> 
 export function TankSwitcher({
   tanks,
   activeTankId,
+  className,
 }: {
   tanks: SwitcherTank[]
   activeTankId: string | null
+  className?: string
 }) {
   const prefs = useUnits()
   const [open, setOpen] = useState(false)
@@ -64,7 +66,7 @@ export function TankSwitcher({
   }
 
   return (
-    <div ref={rootRef} className="relative min-w-0 w-full sm:max-w-[18rem]">
+    <div ref={rootRef} className={cn("relative min-w-0", className)}>
       <button
         type="button"
         aria-expanded={open}
@@ -72,7 +74,7 @@ export function TankSwitcher({
         disabled={pending}
         onClick={() => setOpen((value) => !value)}
         className={cn(
-          "flex h-11 w-full min-w-0 items-center gap-2 rounded-2xl border border-primary/20 bg-background px-2.5 text-left shadow-sm transition active:scale-[0.99] sm:h-10",
+          "flex h-10 w-full min-w-0 max-w-full items-center gap-2 rounded-2xl border border-primary/20 bg-background px-2 text-left shadow-sm transition active:scale-[0.99]",
           open && "ring-2 ring-primary/25",
           pending && "opacity-70",
         )}
@@ -82,20 +84,23 @@ export function TankSwitcher({
           color={active.icon_color}
           photoUrl={active.icon_photo_url}
           waterType={active.water_type}
+          className="size-7 shrink-0 rounded-lg"
         />
-        <span className="min-w-0 flex-1">
+        <span className="min-w-0 flex-1 overflow-hidden">
           <span className="block truncate text-sm font-medium leading-tight">{active.name}</span>
-          <span className="block truncate text-[11px] text-muted-foreground">
-            {active.water_type === "freshwater" ? "Freshwater" : "Saltwater"} · {formatLastTestAge(active.lastTestAt)}
+          <span className="block truncate text-[11px] leading-tight text-muted-foreground">
+            {active.water_type === "freshwater" ? "FW" : "SW"} · {formatLastTestAge(active.lastTestAt)}
           </span>
         </span>
-        <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition", open && "rotate-180")} />
+        <ChevronDown
+          className={cn("size-4 shrink-0 text-muted-foreground transition", open && "rotate-180")}
+        />
       </button>
 
       {open ? (
         <ul
           role="listbox"
-          className="tt-fade-up absolute inset-x-0 top-[calc(100%+0.4rem)] z-50 max-h-[min(70vh,22rem)] overflow-auto rounded-2xl border border-primary/15 bg-popover/95 p-1.5 shadow-xl shadow-primary/10 backdrop-blur-xl"
+          className="tt-fade-up absolute left-0 top-[calc(100%+0.4rem)] z-50 w-[min(18rem,calc(100vw-1.5rem))] max-h-[min(70vh,22rem)] overflow-auto rounded-2xl border border-primary/15 bg-popover/95 p-1.5 shadow-xl shadow-primary/10 backdrop-blur-xl"
         >
           {tanks.map((tank) => {
             const selected = tank.id === active.id

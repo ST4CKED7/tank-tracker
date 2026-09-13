@@ -88,11 +88,44 @@ export function LivestockManager({
     ? (["all", "fish", "invert", "plant"] as const)
     : (["all", "fish", "coral", "invert"] as const)
   const [kind, setKind] = useState<"all" | "fish" | "coral" | "invert" | "plant">("all")
+  const [category, setCategory] = useState<string>("all")
   const prefs = useUnits()
+
+  // Categories available for the active kind, so the group picker stays relevant.
+  const categoriesForKind = useMemo(() => {
+    const set = new Set<string>()
+    for (const species of catalog) {
+      if (kind !== "all" && species.kind !== kind) continue
+      if (species.category) set.add(species.category)
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [catalog, kind])
+
   const filtered = catalog.filter((species) => {
     const hay = `${species.common_name} ${species.scientific_name ?? ""} ${species.notes ?? ""}`.toLowerCase()
-    return hay.includes(query.toLowerCase()) && (kind === "all" || species.kind === kind)
+    return (
+      hay.includes(query.toLowerCase()) &&
+      (kind === "all" || species.kind === kind) &&
+      (category === "all" || species.category === category)
+    )
   })
+
+  // Group the catalog by category for easier browsing (esp. large freshwater lists).
+  const grouped = useMemo(() => {
+    const map = new Map<string, Species[]>()
+    for (const species of filtered) {
+      const key = species.category ?? "Other"
+      const list = map.get(key)
+      if (list) list.push(species)
+      else map.set(key, [species])
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+  }, [filtered])
+
+  function selectKind(next: typeof kind) {
+    setKind(next)
+    setCategory("all")
+  }
   const suggestions = useMemo(
     () => suggestAdditions(catalog, tank, livestock, latest).slice(0, 12),
     [catalog, tank, livestock, latest],
@@ -146,6 +179,7 @@ export function LivestockManager({
                       speciesId={item.species.id}
                       commonName={item.species.common_name}
                       scientificName={item.species.scientific_name}
+                      kind={item.species.kind}
                       size="md"
                     />
                     <div className="min-w-0">
@@ -298,6 +332,7 @@ export function LivestockManager({
                   speciesId={item.species.id}
                   commonName={item.species.common_name}
                   scientificName={item.species.scientific_name}
+                  kind={item.species.kind}
                   size="sm"
                 />
                 <div className="min-w-0 flex-1">
@@ -401,18 +436,51 @@ export function LivestockManager({
               className="w-full max-w-md"
             />
             {kindOptions.map((option) => (
-              <Button key={option} type="button" size="sm" variant={kind === option ? "default" : "outline"} onClick={() => setKind(option)}>
+              <Button key={option} type="button" size="sm" variant={kind === option ? "default" : "outline"} onClick={() => selectKind(option)}>
                 {option}
               </Button>
             ))}
           </div>
+          {categoriesForKind.length > 1 ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant={category === "all" ? "secondary" : "ghost"}
+                className="h-8 rounded-full"
+                onClick={() => setCategory("all")}
+              >
+                All groups
+              </Button>
+              {categoriesForKind.map((cat) => (
+                <Button
+                  key={cat}
+                  type="button"
+                  size="sm"
+                  variant={category === cat ? "secondary" : "ghost"}
+                  className="h-8 rounded-full"
+                  onClick={() => setCategory(cat)}
+                >
+                  {cat}
+                </Button>
+              ))}
+            </div>
+          ) : null}
           <p className="text-xs text-muted-foreground">
             {filtered.length === 0
               ? `No matches in ${catalog.length} species. Try another name, or add a custom species below.`
               : `Showing ${filtered.length} of ${catalog.length}`}
           </p>
-          <div className="grid gap-3 md:grid-cols-2">
-            {filtered.map((species) => (
+          <div className="space-y-5">
+            {grouped.map(([groupName, speciesInGroup]) => (
+              <div key={groupName} className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-foreground">{groupName}</h3>
+                  <span className="text-xs text-muted-foreground">{speciesInGroup.length}</span>
+                  <div className="h-px flex-1 bg-primary/10" />
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {speciesInGroup.map((species) => (
               <form
                 key={species.id}
                 action={addLivestock}
@@ -434,6 +502,7 @@ export function LivestockManager({
                     speciesId={species.id}
                     commonName={species.common_name}
                     scientificName={species.scientific_name}
+                    kind={species.kind}
                     size="md"
                   />
                   <div className="min-w-0">
@@ -516,6 +585,9 @@ export function LivestockManager({
                   </SubmitButton>
                 </div>
               </form>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
           <details className="rounded-lg border p-4">

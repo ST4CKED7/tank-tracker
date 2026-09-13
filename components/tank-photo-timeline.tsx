@@ -1,8 +1,13 @@
 "use client"
 
-import { useRef, useState, useTransition } from "react"
+import { useMemo, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { deleteTankPhoto, setTankIconPhoto, uploadTankPhoto } from "@/lib/actions"
+import {
+  deleteTankPhoto,
+  setTankIconPhoto,
+  updateTankPhotoCaption,
+  uploadTankPhoto,
+} from "@/lib/actions"
 import { objectUrlFromImageUrl, prepareTankPhoto } from "@/lib/tank-photo"
 import type { Tables } from "@/lib/database.types"
 import { SubmitButton } from "@/components/submit-button"
@@ -11,33 +16,60 @@ import { softHaptic } from "@/components/form-success-toast"
 import { TankIconCropDialog } from "@/components/tank-icon-crop-dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { format, parseISO } from "date-fns"
-import { Camera, ImagePlus, Sparkles, X } from "lucide-react"
+import { Camera, ChevronLeft, ChevronRight, ImagePlus, Pencil, Sparkles, X } from "lucide-react"
 import { toast } from "sonner"
+import { PhotoCompareSlider } from "@/components/photo-compare-slider"
 
 const ACCEPT = "image/*,image/jpeg,image/png,image/webp,image/heic,image/heif"
+
+type Photo = Tables<"tank_photos">
 
 export function TankPhotoTimeline({
   tankId,
   photos,
 }: {
   tankId: string
-  photos: Tables<"tank_photos">[]
+  photos: Photo[]
 }) {
-  const [lightbox, setLightbox] = useState<string | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [localPreview, setLocalPreview] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const [iconPending, setIconPending] = useState(false)
   const [iconLoadingId, setIconLoadingId] = useState<string | null>(null)
   const [cropSrc, setCropSrc] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState("")
   const router = useRouter()
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
   const captionRef = useRef<HTMLInputElement>(null)
   const takenAtRef = useRef<HTMLInputElement>(null)
+
+  // Photos arrive newest-first; group them into month buckets in that order.
+  const months = useMemo(() => {
+    const map = new Map<string, { label: string; items: Photo[] }>()
+    for (const photo of photos) {
+      const date = parseISO(photo.taken_at)
+      const key = format(date, "yyyy-MM")
+      const group = map.get(key) ?? { label: format(date, "MMMM yyyy"), items: [] }
+      group.items.push(photo)
+      map.set(key, group)
+    }
+    return Array.from(map.values())
+  }, [photos])
+
+  const activePhoto = lightboxIndex != null ? photos[lightboxIndex] ?? null : null
 
   function clearCropSrc() {
     setCropSrc((current) => {
@@ -106,7 +138,7 @@ export function TankPhotoTimeline({
     })
   }
 
-  function useAsIcon(photo: Tables<"tank_photos">) {
+  function pickAsIcon(photo: Photo) {
     setIconPending(true)
     setIconLoadingId(photo.id)
     startTransition(async () => {
@@ -149,7 +181,39 @@ export function TankPhotoTimeline({
     })
   }
 
+  function startEditing(photo: Photo) {
+    setEditingId(photo.id)
+    setEditValue(photo.caption ?? "")
+  }
+
+  function saveCaption(photoId: string) {
+    const value = editValue
+    startTransition(async () => {
+      const formData = new FormData()
+      formData.set("id", photoId)
+      formData.set("caption", value)
+      const result = await updateTankPhotoCaption(formData)
+      if (!result?.ok) {
+        toast.error(result?.error || "Could not save caption.")
+        return
+      }
+      softHaptic()
+      setEditingId(null)
+      router.refresh()
+    })
+  }
+
+  function showPrev() {
+    setLightboxIndex((index) => (index == null ? index : Math.max(0, index - 1)))
+  }
+  function showNext() {
+    setLightboxIndex((index) => (index == null ? index : Math.min(photos.length - 1, index + 1)))
+  }
+
   return (
+    <div className="space-y-4">
+      {photos.length >= 2 ? <PhotoCompareSlider photos={photos} /> : null}
+
     <Card id="photos" className="scroll-mt-24">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -157,8 +221,8 @@ export function TankPhotoTimeline({
           Add a photo
         </CardTitle>
         <CardDescription>
-          Newest first. On your phone, Take photo opens the camera; Choose from library picks an existing shot.
-          Any shot can also be used as the tank icon in the header switcher.
+          Grouped by month, newest first. On your phone, Take photo opens the camera; Choose from library picks an
+          existing shot. Any shot can also be used as the tank icon in the header switcher.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -254,87 +318,163 @@ export function TankPhotoTimeline({
             className="py-6 shadow-none"
           />
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {photos.map((photo) => (
-              <figure
-                key={photo.id}
-                className="group relative overflow-hidden rounded-xl border border-primary/10 bg-background/40"
-              >
-                <button
-                  type="button"
-                  className="block w-full text-left"
-                  onClick={() => setLightbox(photo.public_url)}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={photo.public_url}
-                    alt={photo.caption || "Tank photo"}
-                    className="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]"
-                  />
-                </button>
-                <figcaption className="space-y-1 px-2 py-1.5 text-xs">
-                  <div className="font-medium text-muted-foreground">
-                    {format(parseISO(photo.taken_at), "MMM d, yyyy")}
-                  </div>
-                  {photo.caption ? <div className="line-clamp-2">{photo.caption}</div> : null}
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      className="h-7 w-full gap-1 px-2 text-[11px]"
-                      disabled={pending || iconPending}
-                      onClick={() => useAsIcon(photo)}
-                    >
-                      <Sparkles className="size-3" />
-                      {iconLoadingId === photo.id ? "Loading…" : "Use as icon"}
-                    </Button>
-                </figcaption>
-                <form action={deleteTankPhoto} className="absolute right-1.5 top-1.5">
-                  <input type="hidden" name="id" value={photo.id} />
-                  <SubmitButton
-                    type="submit"
-                    size="icon"
-                    variant="secondary"
-                    className="size-8 opacity-90 shadow"
-                    pendingLabel="…"
-                    aria-label="Delete photo"
-                  >
-                    <X className="size-3.5" />
-                  </SubmitButton>
-                </form>
-              </figure>
+          <div className="space-y-6">
+            {months.map((month) => (
+              <div key={month.label} className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold">{month.label}</h3>
+                  <span className="text-xs text-muted-foreground">{month.items.length}</span>
+                  <div className="h-px flex-1 bg-primary/10" />
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {month.items.map((photo) => {
+                    const flatIndex = photos.indexOf(photo)
+                    const isEditing = editingId === photo.id
+                    return (
+                      <figure
+                        key={photo.id}
+                        className="group relative overflow-hidden rounded-xl border border-primary/10 bg-background/40"
+                      >
+                        <button
+                          type="button"
+                          className="block w-full text-left"
+                          onClick={() => setLightboxIndex(flatIndex)}
+                          aria-label="View photo"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={photo.public_url}
+                            alt={photo.caption || "Tank photo"}
+                            loading="lazy"
+                            className="aspect-square w-full object-cover transition-transform group-hover:scale-[1.02]"
+                          />
+                        </button>
+                        <figcaption className="space-y-1 px-2 py-1.5 text-xs">
+                          <div className="font-medium text-muted-foreground">
+                            {format(parseISO(photo.taken_at), "MMM d, yyyy")}
+                          </div>
+                          {isEditing ? (
+                            <form
+                              onSubmit={(event) => {
+                                event.preventDefault()
+                                saveCaption(photo.id)
+                              }}
+                              className="space-y-1.5"
+                            >
+                              <Input
+                                autoFocus
+                                value={editValue}
+                                onChange={(event) => setEditValue(event.target.value)}
+                                placeholder="Add a caption…"
+                                className="h-8 text-xs"
+                                disabled={pending}
+                              />
+                              <div className="flex gap-1">
+                                <Button type="submit" size="sm" className="h-7 flex-1 text-[11px]" disabled={pending}>
+                                  Save
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 text-[11px]"
+                                  disabled={pending}
+                                  onClick={() => setEditingId(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </form>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => startEditing(photo)}
+                              className="flex w-full items-start gap-1 text-left transition-colors hover:text-foreground"
+                            >
+                              <span className={photo.caption ? "line-clamp-2" : "text-muted-foreground italic"}>
+                                {photo.caption || "Add a caption"}
+                              </span>
+                              <Pencil className="mt-0.5 size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-60" />
+                            </button>
+                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            className="h-7 w-full gap-1 px-2 text-[11px]"
+                            disabled={pending || iconPending}
+                            onClick={() => pickAsIcon(photo)}
+                          >
+                            <Sparkles className="size-3" />
+                            {iconLoadingId === photo.id ? "Loading…" : "Use as icon"}
+                          </Button>
+                        </figcaption>
+                        <form action={deleteTankPhoto} className="absolute right-1.5 top-1.5">
+                          <input type="hidden" name="id" value={photo.id} />
+                          <SubmitButton
+                            type="submit"
+                            size="icon"
+                            variant="secondary"
+                            className="size-8 opacity-90 shadow"
+                            pendingLabel="…"
+                            aria-label="Delete photo"
+                          >
+                            <X className="size-3.5" />
+                          </SubmitButton>
+                        </form>
+                      </figure>
+                    )
+                  })}
+                </div>
+              </div>
             ))}
           </div>
         )}
-
-        {lightbox ? (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-            onClick={() => setLightbox(null)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") setLightbox(null)
-            }}
-            role="dialog"
-            aria-modal="true"
-          >
-            <button
-              type="button"
-              className="absolute right-4 top-4 rounded-full bg-background/90 p-2"
-              onClick={() => setLightbox(null)}
-              aria-label="Close"
-            >
-              <X className="size-5" />
-            </button>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={lightbox}
-              alt="Tank photo preview"
-              className="max-h-[90vh] max-w-full rounded-lg object-contain"
-              onClick={(event) => event.stopPropagation()}
-            />
-          </div>
-        ) : null}
       </CardContent>
+
+      {/* Focus-trapped lightbox with prev/next navigation. */}
+      <Dialog open={activePhoto != null} onOpenChange={(open) => (open ? null : setLightboxIndex(null))}>
+        <DialogContent className="max-w-4xl gap-2 border-primary/20 bg-background/95 p-3 sm:p-4">
+          <DialogHeader>
+            <DialogTitle className="text-sm">
+              {activePhoto ? format(parseISO(activePhoto.taken_at), "MMMM d, yyyy") : "Photo"}
+            </DialogTitle>
+            <DialogDescription className={activePhoto?.caption ? undefined : "sr-only"}>
+              {activePhoto?.caption || "Tank photo"}
+            </DialogDescription>
+          </DialogHeader>
+          {activePhoto ? (
+            <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={activePhoto.public_url}
+                alt={activePhoto.caption || "Tank photo"}
+                className="max-h-[72vh] w-full rounded-lg object-contain"
+              />
+              {lightboxIndex != null && lightboxIndex > 0 ? (
+                <button
+                  type="button"
+                  onClick={showPrev}
+                  aria-label="Previous photo"
+                  className="absolute left-1 top-1/2 -translate-y-1/2 rounded-full bg-background/85 p-2 shadow hover:bg-background"
+                >
+                  <ChevronLeft className="size-5" />
+                </button>
+              ) : null}
+              {lightboxIndex != null && lightboxIndex < photos.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={showNext}
+                  aria-label="Next photo"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-background/85 p-2 shadow hover:bg-background"
+                >
+                  <ChevronRight className="size-5" />
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <TankIconCropDialog
         open={Boolean(cropSrc)}
@@ -346,5 +486,6 @@ export function TankPhotoTimeline({
         onConfirm={uploadCroppedIcon}
       />
     </Card>
+    </div>
   )
 }

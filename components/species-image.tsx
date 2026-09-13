@@ -17,6 +17,16 @@ const MAX_IN_FLIGHT = 3
 let inFlight = 0
 const waitQueue: Array<() => void> = []
 
+/** Known wrong auto-matches (insects/plants) that should be re-resolved. */
+const BAD_IMAGE_RE =
+  /photos\/(39295509|3027303|29616601)(?:\/|\.|$)|Allocapnia|flowering.?plant/i
+
+function usableSrc(src?: string | null) {
+  if (!src) return null
+  if (BAD_IMAGE_RE.test(src)) return null
+  return src
+}
+
 function acquireSlot() {
   if (inFlight < MAX_IN_FLIGHT) {
     inFlight += 1
@@ -42,6 +52,7 @@ export function SpeciesImage({
   speciesId,
   scientificName,
   commonName,
+  kind,
   className,
   size = "md",
 }: {
@@ -50,19 +61,22 @@ export function SpeciesImage({
   speciesId?: string
   scientificName?: string | null
   commonName?: string
+  kind?: "fish" | "coral" | "invert" | "plant" | null
   className?: string
   size?: "sm" | "md" | "lg"
 }) {
-  const [url, setUrl] = useState<string | null>(src ?? null)
+  const initial = usableSrc(src)
+  const [url, setUrl] = useState<string | null>(initial)
   const [failed, setFailed] = useState(false)
-  const [loading, setLoading] = useState(!src && Boolean(commonName))
+  const [loading, setLoading] = useState(!initial && Boolean(commonName))
   const [open, setOpen] = useState(false)
   const dim = size === "sm" ? "size-12" : size === "lg" ? "size-20" : "size-14"
 
   useEffect(() => {
-    setUrl(src ?? null)
+    const next = usableSrc(src)
+    setUrl(next)
     setFailed(false)
-    setLoading(!src && Boolean(commonName))
+    setLoading(!next && Boolean(commonName))
   }, [src, commonName])
 
   useEffect(() => {
@@ -73,6 +87,7 @@ export function SpeciesImage({
     let cancelled = false
     const params = new URLSearchParams({ common: commonName })
     if (scientificName) params.set("scientific", scientificName)
+    if (kind) params.set("kind", kind)
 
     ;(async () => {
       await acquireSlot()
@@ -84,9 +99,10 @@ export function SpeciesImage({
         const res = await fetch(`/api/species-image?${params}`)
         const data = (await res.json()) as { url?: string | null }
         if (cancelled) return
-        if (data.url) {
-          setUrl(data.url)
-          if (speciesId) void cacheSpeciesImage(speciesId, data.url)
+        const resolved = usableSrc(data.url)
+        if (resolved) {
+          setUrl(resolved)
+          if (speciesId) void cacheSpeciesImage(speciesId, resolved)
         }
       } catch {
         // keep placeholder
@@ -99,7 +115,7 @@ export function SpeciesImage({
     return () => {
       cancelled = true
     }
-  }, [url, commonName, scientificName, speciesId])
+  }, [url, commonName, scientificName, speciesId, kind])
 
   const thumb = !url || failed ? (
     <div

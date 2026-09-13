@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import type { Database } from "@/lib/database.types"
 import { assertSupabaseEnv, supabaseCookieOptions } from "@/lib/supabase/env"
 
-const PUBLIC_PATHS = ["/login", "/auth", "/sw.js", "/manifest.webmanifest"]
+const PUBLIC_PATHS = ["/login", "/auth", "/share", "/sw.js", "/manifest.webmanifest"]
 
 export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname

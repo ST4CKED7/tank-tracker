@@ -46,7 +46,7 @@ function revalidateAppPaths(...paths: string[]) {
 
 /** Tank identity / prefs changed — refresh shell consumers. */
   function revalidateTankShell() {
-  revalidateAppPaths("/", "/settings", "/livestock", "/tests", "/dosing", "/equipment", "/charts", "/cycle", "/photos")
+  revalidateAppPaths("/", "/tanks", "/settings", "/livestock", "/tests", "/dosing", "/equipment", "/charts", "/cycle", "/photos")
 }
 
 export async function signOut() {
@@ -440,7 +440,7 @@ export async function addCustomSpecies(formData: FormData) {
   const adultLength = Number(formData.get("adult_length") || 0)
   const commonName = String(formData.get("common_name"))
   const scientificName = String(formData.get("scientific_name") || "") || null
-  const imageUrl = await resolveSpeciesImageUrl({ commonName, scientificName })
+  const imageUrl = await resolveSpeciesImageUrl({ commonName, scientificName, kind })
   const fw = waterType === "freshwater"
   const resolvedKind = fw && kind === "coral" ? "fish" : !fw && kind === "plant" ? "invert" : kind
   const { error } = await supabase.from("species_catalog").insert({
@@ -776,4 +776,93 @@ export async function deleteEquipment(formData: FormData) {
   const { error } = await supabase.from("equipment").delete().eq("id", String(formData.get("id")))
   if (error) throw error
   revalidateAppPaths("/", "/equipment")
+}
+
+/** Inline-edit a photo caption from the timeline. */
+export async function updateTankPhotoCaption(formData: FormData) {
+  const { supabase, userId } = await requireUser()
+  const id = String(formData.get("id") || "")
+  const caption = String(formData.get("caption") || "").trim() || null
+  if (!id) return { ok: false as const, error: "Missing photo." }
+  const { error } = await supabase
+    .from("tank_photos")
+    .update({ caption })
+    .eq("id", id)
+    .eq("user_id", userId)
+  if (error) return { ok: false as const, error: error.message || "Could not save caption." }
+  revalidateAppPaths("/photos", "/")
+  return { ok: true as const }
+}
+
+/** Turn on / adjust a per-parameter test reminder (e.g. test alkalinity every 3 days). */
+export async function upsertParameterReminder(formData: FormData) {
+  const { supabase, userId } = await requireUser()
+  const tankId = String(formData.get("tank_id") || "")
+  const parameter = String(formData.get("parameter") || "")
+  const everyDays = Math.max(1, Number(formData.get("every_days") || 7))
+  if (!tankId || !parameter) return
+  const { error } = await supabase
+    .from("parameter_reminders")
+    .upsert(
+      { user_id: userId, tank_id: tankId, parameter, every_days: everyDays },
+      { onConflict: "tank_id,parameter" },
+    )
+  if (error) throw error
+  revalidateAppPaths("/", "/tests")
+}
+
+/** Turn off a per-parameter test reminder. */
+export async function deleteParameterReminder(formData: FormData) {
+  const { supabase, userId } = await requireUser()
+  const tankId = String(formData.get("tank_id") || "")
+  const parameter = String(formData.get("parameter") || "")
+  if (!tankId || !parameter) return
+  const { error } = await supabase
+    .from("parameter_reminders")
+    .delete()
+    .eq("user_id", userId)
+    .eq("tank_id", tankId)
+    .eq("parameter", parameter)
+  if (error) throw error
+  revalidateAppPaths("/", "/tests")
+}
+
+/** Create (or rotate) a read-only public share link for a tank. */
+export async function enableTankShare(formData: FormData) {
+  const { supabase, userId } = await requireUser()
+  const tankId = String(formData.get("tank_id") || "")
+  if (!tankId) return
+
+  const { data: owned } = await supabase
+    .from("tanks")
+    .select("id")
+    .eq("id", tankId)
+    .eq("user_id", userId)
+    .maybeSingle()
+  if (!owned) return
+
+  const token = crypto.randomUUID().replace(/-/g, "")
+  const { error } = await supabase
+    .from("tank_shares")
+    .upsert(
+      { tank_id: tankId, user_id: userId, token },
+      { onConflict: "tank_id" },
+    )
+  if (error) throw error
+
+  revalidateAppPaths("/settings")
+}
+
+/** Turn off public sharing for a tank (invalidates the existing link). */
+export async function disableTankShare(formData: FormData) {
+  const { supabase, userId } = await requireUser()
+  const tankId = String(formData.get("tank_id") || "")
+  if (!tankId) return
+  const { error } = await supabase
+    .from("tank_shares")
+    .delete()
+    .eq("user_id", userId)
+    .eq("tank_id", tankId)
+  if (error) throw error
+  revalidateAppPaths("/settings")
 }

@@ -204,6 +204,73 @@ export type Database = {
           },
         ]
       }
+      parameter_reminders: {
+        Row: {
+          created_at: string
+          every_days: number
+          id: string
+          parameter: string
+          tank_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          every_days?: number
+          id?: string
+          parameter: string
+          tank_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          every_days?: number
+          id?: string
+          parameter?: string
+          tank_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parameter_reminders_tank_id_fkey"
+            columns: ["tank_id"]
+            isOneToOne: false
+            referencedRelation: "tanks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tank_shares: {
+        Row: {
+          created_at: string
+          id: string
+          tank_id: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tank_id: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tank_id?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tank_shares_tank_id_fkey"
+            columns: ["tank_id"]
+            isOneToOne: true
+            referencedRelation: "tanks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       species_catalog: {
         Row: {
           adult_length_inches: number | null
@@ -213,6 +280,7 @@ export type Database = {
           bioload_factor: number
           ca_max: number | null
           ca_min: number | null
+          category: string | null
           common_name: string
           diet: string | null
           flow: string | null
@@ -248,6 +316,7 @@ export type Database = {
           bioload_factor?: number
           ca_max?: number | null
           ca_min?: number | null
+          category?: string | null
           common_name: string
           diet?: string | null
           flow?: string | null
@@ -447,6 +516,14 @@ export type Database = {
       set_species_image: {
         Args: { p_id: string; p_url: string }
         Returns: undefined
+      }
+      latest_test_per_tank: {
+        Args: Record<string, never>
+        Returns: { tank_id: string; tested_at: string }[]
+      }
+      get_shared_tank: {
+        Args: { p_token: string }
+        Returns: Json
       }
     }
     Enums: {

@@ -5,10 +5,12 @@ import { InstallAppCard } from "@/components/install-app-card"
 import { PageHero } from "@/components/page-hero"
 import { TankForm } from "@/components/tank-form"
 import { TankIconBadge } from "@/components/tank-icon"
+import { TankSharePanel } from "@/components/tank-share-panel"
 import { UnitPrefsForm } from "@/components/unit-prefs-form"
 import { SubmitButton } from "@/components/submit-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getActiveTankContext } from "@/lib/queries"
+import { createClient } from "@/lib/supabase/server"
 import { formatVolume, unitPrefsFromTank } from "@/lib/units"
 import { cn } from "@/lib/utils"
 
@@ -16,6 +18,17 @@ export default async function SettingsPage() {
   const { tanks, tank } = await getActiveTankContext()
   const prefs = unitPrefsFromTank(tank)
   const data = { tanks, tank }
+
+  let shareToken: string | null = null
+  if (tank) {
+    const supabase = await createClient()
+    const { data: share } = await supabase
+      .from("tank_shares")
+      .select("token")
+      .eq("tank_id", tank.id)
+      .maybeSingle()
+    shareToken = share?.token ?? null
+  }
 
   return (
     <div className="space-y-6">
@@ -88,6 +101,8 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      {data.tank ? <TankSharePanel tankId={data.tank.id} token={shareToken} /> : null}
 
       {data.tank ? (
         <div className="space-y-2">

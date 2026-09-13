@@ -14,6 +14,7 @@ import {
   YAxis,
 } from "recharts"
 import { displayRange, parameterMeta, type ParameterKey } from "@/lib/parameters"
+import { chartTooltipStyle } from "@/lib/chart-theme"
 import type { RangeMap } from "@/lib/compatibility"
 import type { Tables } from "@/lib/database.types"
 import { useMemo, useState } from "react"
@@ -103,20 +104,20 @@ function ChartCard({
           <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.15} />
           <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={28} interval="preserveStartEnd" />
           <YAxis width={40} tick={{ fontSize: 11 }} domain={["auto", "auto"]} />
-          <Tooltip />
+          <Tooltip {...chartTooltipStyle} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
           {band ? (
-            <ReferenceArea y1={band.min} y2={band.max} fill="#14b8a6" fillOpacity={0.12} />
+            <ReferenceArea y1={band.min} y2={band.max} fill="var(--chart-1)" fillOpacity={0.12} />
           ) : null}
           {waterChanges.map((change) => (
             <ReferenceLine
               key={change.id}
               x={format(parseISO(change.changed_at), "MMM d")}
-              stroke="#fb923c"
+              stroke="var(--chart-2)"
               strokeDasharray="4 4"
             />
           ))}
-          <Line type="monotone" dataKey="value" name={meta.label} stroke="#0d9488" strokeWidth={2} dot={{ r: 3 }} />
+          <Line type="monotone" dataKey="value" name={meta.label} stroke="var(--primary)" strokeWidth={2} dot={{ r: 3 }} />
         </LineChart>
       </ResponsiveContainer>
     </div>

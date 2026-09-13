@@ -1294,12 +1294,26 @@
   .tt-fade-up {
     animation: tt-fade-up 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
+  @keyframes tt-slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .tt-slide-up {
+    animation: tt-slide-up 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
   .tt-stagger > * {
     animation: tt-fade-up 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   @media (prefers-reduced-motion: reduce) {
     .tt-fade-in,
     .tt-fade-up,
+    .tt-slide-up,
     .tt-stagger > * {
       animation: none !important;
     }

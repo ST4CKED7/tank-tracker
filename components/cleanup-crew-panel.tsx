@@ -114,6 +114,7 @@ export function CleanupCrewPanel({
                     speciesId={item.species.id}
                     commonName={item.species.common_name}
                     scientificName={item.species.scientific_name}
+                    kind={item.species.kind}
                     size="sm"
                   />
                   <div className="min-w-0">

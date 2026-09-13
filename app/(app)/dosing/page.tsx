@@ -45,6 +45,7 @@ export default async function DosingPage() {
         <DosingPanel
           tankId={data.tank.id}
           doses={data.doses}
+          tests={data.tests}
           freshwater={fw}
           systemGallons={systemGallons(data.tank)}
           suggestions={suggestions}

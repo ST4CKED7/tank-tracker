@@ -28,6 +28,7 @@ export default async function HomePage() {
     doseSchedules: true,
     equipment: true,
     catalog: false,
+    parameterReminders: true,
   })
   if (!data.tank) {
     return (
@@ -38,12 +39,18 @@ export default async function HomePage() {
     )
   }
 
+  const lastTestByParameter: Record<string, string> = {}
+  for (const test of data.tests) {
+    if (!lastTestByParameter[test.parameter]) lastTestByParameter[test.parameter] = test.tested_at
+  }
   const reminders = buildReminders({
     tank: data.tank,
     lastWaterChange: data.waterChanges[0]?.changed_at,
     lastTest: data.tests[0]?.tested_at,
     equipment: data.equipment,
     doseSchedules: data.doseSchedules,
+    parameterReminders: data.parameterReminders,
+    lastTestByParameter,
   })
   const nitrateWarning = nitrateRisingDespiteChanges(
     data.tests.filter((t) => t.parameter === "nitrate").map((t) => ({ testedAt: t.tested_at, value: Number(t.value) })),

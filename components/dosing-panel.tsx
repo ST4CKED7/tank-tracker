@@ -14,25 +14,32 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { DoseCalculator, type DosePrefill } from "@/components/seachem-calculator"
 import { useUnits } from "@/components/units-provider"
-import { format, parseISO } from "date-fns"
-import { Droplets } from "lucide-react"
+import { format, formatDistanceToNow, parseISO } from "date-fns"
+import { ArrowDownRight, ArrowUpRight, Droplets, Minus } from "lucide-react"
 import { staggerStyle } from "@/lib/motion"
+import { summarizeDoseResponses } from "@/lib/dose-response"
 import { cn } from "@/lib/utils"
 
 export function DosingPanel({
   tankId,
   doses,
+  tests = [],
   freshwater = false,
   systemGallons,
   suggestions = [],
 }: {
   tankId: string
   doses: Tables<"dose_logs">[]
+  tests?: Tables<"test_logs">[]
   freshwater?: boolean
   systemGallons: number
   suggestions?: DoseSuggestion[]
 }) {
   const prefs = useUnits()
+  const responses = useMemo(
+    () => summarizeDoseResponses(doses, tests, freshwater ? "freshwater" : "saltwater"),
+    [doses, tests, freshwater],
+  )
   const searchParams = useSearchParams()
   const initialProductId = searchParams.get("productId")
   const initialCurrent = searchParams.get("current")
@@ -103,6 +110,55 @@ export function DosingPanel({
         initialCurrent={initialCurrent ?? (activeSuggestion?.current != null ? String(activeSuggestion.current) : null)}
         initialTarget={initialTarget ?? (activeSuggestion?.target != null ? String(activeSuggestion.target) : null)}
       />
+
+      {responses.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Dose response</CardTitle>
+            <CardDescription>
+              How each parameter moved after your most recent dose — a quick check that what you added is working.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {responses.map((response) => {
+              const Icon =
+                response.status === "toward"
+                  ? ArrowUpRight
+                  : response.status === "away"
+                    ? ArrowDownRight
+                    : Minus
+              return (
+                <div
+                  key={response.parameter}
+                  className={cn(
+                    "flex items-start gap-3 rounded-xl border px-3 py-2.5",
+                    response.status === "toward" && "border-emerald-500/30 bg-emerald-500/5",
+                    response.status === "away" && "border-amber-500/30 bg-amber-500/5",
+                    (response.status === "flat" || response.status === "pending") &&
+                      "border-primary/10 bg-background/40",
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      "mt-0.5 size-4 shrink-0",
+                      response.status === "toward" && "text-emerald-600 dark:text-emerald-400",
+                      response.status === "away" && "text-amber-600 dark:text-amber-400",
+                      (response.status === "flat" || response.status === "pending") &&
+                        "text-muted-foreground",
+                    )}
+                  />
+                  <div className="min-w-0">
+                    <div className="text-sm">{response.detail}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Dosed {formatDistanceToNow(parseISO(response.dosedAt), { addSuffix: true })}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
         <Card>

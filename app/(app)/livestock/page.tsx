@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { unitPrefsFromTank } from "@/lib/units"
 import Link from "next/link"
 
+export const dynamic = "force-dynamic"
+
 export default async function LivestockPage() {
   const data = await getDashboardData({
     livestock: true,

@@ -28,6 +28,7 @@ export function RemindersPanel({
   const mixGallons = useMemo(() => waterChangeGallons(tank, percent), [tank, percent])
   const salt = useMemo(() => saltMixForGallons(mixGallons), [mixGallons])
   const mixedDisplay = displayVolume(mixGallons, system)
+  const [volume, setVolume] = useState(String(mixedDisplay))
 
   useEffect(() => {
     if (suggestedPercent != null && suggestedPercent > 0) {
@@ -35,14 +36,18 @@ export function RemindersPanel({
     }
   }, [suggestedPercent])
 
+  useEffect(() => {
+    setVolume(String(mixedDisplay))
+  }, [mixedDisplay])
+
   return (
-    <Card>
+    <Card id="reminders" className="scroll-mt-24">
       <CardHeader>
         <CardTitle>Water change</CardTitle>
         <CardDescription>
           {suggestedPercent
             ? `Chemistry suggests ~${suggestedPercent}% — adjust if you prefer a gentler change.`
-            : "Mix volume and log a change when you’re ready."}
+            : "Set the %, see mix volume, then log when you’re done."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -52,13 +57,14 @@ export function RemindersPanel({
           </p>
         ) : null}
 
-        <div className="space-y-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
-          <div className="font-medium">Water change calculator</div>
+        <form action={logWaterChange} className="space-y-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
+          <input type="hidden" name="tank_id" value={tank.id} />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <Label htmlFor="calc_percent">Change %</Label>
+              <Label htmlFor="percent">Change %</Label>
               <Input
-                id="calc_percent"
+                id="percent"
+                name="percent"
                 type="number"
                 step="0.1"
                 min={0}
@@ -66,57 +72,40 @@ export function RemindersPanel({
                 onChange={(e) => setPercent(Number(e.target.value) || 0)}
               />
             </div>
-            <div className="rounded-lg bg-background/60 px-3 py-2 text-sm">
-              <div>
-                Mix <span className="font-semibold">{formatVolume(mixGallons, system)}</span>
-              </div>
-              {fw ? (
-                <div className="text-muted-foreground">Dechlorinated / conditioned water</div>
-              ) : (
-                <div className="text-muted-foreground">
-                  Salt ≈ <span className="font-medium text-foreground">{salt.cups} cups</span>
-                  {" · "}
-                  {salt.grams}g ({salt.ounces} oz)
-                </div>
-              )}
+            <div className="space-y-1">
+              <Label htmlFor="volume">Mixed ({volumeLabel(system)})</Label>
+              <Input
+                id="volume"
+                name="volume"
+                type="number"
+                step="0.1"
+                value={volume}
+                onChange={(e) => setVolume(e.target.value)}
+              />
             </div>
+          </div>
+          <div className="rounded-lg bg-background/60 px-3 py-2 text-sm">
+            <div>
+              Mix about <span className="font-semibold">{formatVolume(mixGallons, system)}</span>
+            </div>
+            {fw ? (
+              <div className="text-muted-foreground">Dechlorinated / conditioned water</div>
+            ) : (
+              <div className="text-muted-foreground">
+                Salt ≈ <span className="font-medium text-foreground">{salt.cups} cups</span>
+                {" · "}
+                {salt.grams}g ({salt.ounces} oz)
+              </div>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">
             {fw
               ? "Match temperature to the tank. Condition tap water before adding."
               : "Based on ~½ cup salt mix per US gallon (~35 g/L). Brands differ — verify salinity with a refractometer."}
           </p>
-        </div>
-
-        <form action={logWaterChange} className="grid gap-3 rounded-lg bg-muted/40 p-3 md:grid-cols-3">
-          <input type="hidden" name="tank_id" value={tank.id} />
-          <div className="space-y-1">
-            <Label htmlFor="percent">Change %</Label>
-            <Input
-              id="percent"
-              name="percent"
-              type="number"
-              step="0.1"
-              value={percent}
-              onChange={(e) => setPercent(Number(e.target.value) || 0)}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="volume">Mixed ({volumeLabel(system)})</Label>
-            <Input
-              id="volume"
-              name="volume"
-              type="number"
-              step="0.1"
-              key={`${system}-${mixedDisplay}`}
-              defaultValue={mixedDisplay}
-            />
-          </div>
-          <div className="flex items-end">
-            <SubmitButton className="w-full min-h-11" pendingLabel="Logging…" successMessage="Water change logged">
-              Log water change
-            </SubmitButton>
-          </div>
+          <SubmitButton className="w-full min-h-11" pendingLabel="Logging…" successMessage="Water change logged">
+            Log water change
+          </SubmitButton>
         </form>
       </CardContent>
     </Card>

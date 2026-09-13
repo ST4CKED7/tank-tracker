@@ -1,21 +1,16 @@
-import { BioloadGauge } from "@/components/bioload-gauge"
-import { CleanupCrewPanel } from "@/components/cleanup-crew-panel"
+import { AttentionPanel } from "@/components/attention-panel"
 import { CsvExport, LatestReadings } from "@/components/latest-readings"
 import { EmptyState } from "@/components/empty-state"
-import { HomeCleanupCrew } from "@/components/home-cleanup-crew"
+import { HomeStockingSummaries } from "@/components/home-stocking-summaries"
 import { PageHero } from "@/components/page-hero"
 import { PullToRefresh } from "@/components/pull-to-refresh"
-import { NotificationsPanel } from "@/components/notifications-panel"
 import { ParameterTargetsPanel } from "@/components/parameter-targets-panel"
 import { RemindersPanel } from "@/components/reminders-panel"
 import { TankForm } from "@/components/tank-form"
-import { TestAdvicePanel } from "@/components/test-advice-panel"
-import { TodayStrip } from "@/components/today-strip"
 import { detectAnomalies } from "@/lib/anomalies"
 import { nitrateRisingDespiteChanges } from "@/lib/bioload"
-import {
-  isFreshwater,
-} from "@/lib/parameters"
+import { isFreshwater } from "@/lib/parameters"
+import { resolveDashboardTargets } from "@/lib/parameter-targets"
 import { getDashboardData } from "@/lib/queries"
 import { buildReminders } from "@/lib/reminders"
 import { buildTestAdvice, getWaterChangeSuggestion } from "@/lib/test-advice"
@@ -23,7 +18,6 @@ import { sumpMediaLabel } from "@/lib/sump-media"
 import { formatVolume, unitPrefsFromTank } from "@/lib/units"
 import { displayTankType } from "@/lib/tank-profiles"
 import { Fish, FlaskConical } from "lucide-react"
-import { Suspense } from "react"
 
 export default async function HomePage() {
   const data = await getDashboardData({
@@ -88,12 +82,17 @@ export default async function HomePage() {
     livestock: data.livestock,
     prefs,
   })
+  const targets = resolveDashboardTargets({
+    tank: data.tank,
+    livestock: data.livestock,
+    prefs,
+  })
   const outOfRange = advice.filter(
     (item) => item.severity === "urgent" || item.severity === "action" || item.severity === "watch",
   )
   const overdue = reminders.filter((item) => item.overdue)
-  const soon = reminders.filter((item) => item.soon)
   const anomalies = detectAnomalies(testPoints, prefs, waterType)
+  const promoteWaterChange = Boolean(changeSuggestion) || overdue.some((item) => item.kind === "water_change")
 
   const primary =
     changeSuggestion
@@ -103,50 +102,58 @@ export default async function HomePage() {
           detail: changeSuggestion.summary,
         }
       : overdue[0]?.kind === "water_change"
-      ? {
-          label: "Log water change",
-          href: "/#reminders",
-          detail: overdue[0].detail,
-        }
-      : overdue[0]
         ? {
-            label: overdue[0].kind === "equipment" ? "Open gear" : "Open tests",
-            href: overdue[0].href,
+            label: "Log water change",
+            href: "/#reminders",
             detail: overdue[0].detail,
           }
-      : outOfRange[0]
-        ? {
-            label: "Review chemistry",
-            href: "/tests",
-            detail: outOfRange[0].detail,
-          }
-        : anomalies[0]
+        : overdue[0]
           ? {
-              label: "Open charts",
-              href: "/charts",
-              detail: anomalies[0].detail,
+              label: overdue[0].kind === "equipment" ? "Open gear" : "Open tests",
+              href: overdue[0].href,
+              detail: overdue[0].detail,
             }
-          : Object.keys(data.latest).length === 0
+          : outOfRange[0]
             ? {
-                label: "Log first test",
+                label: "Review chemistry",
                 href: "/tests",
-                detail: "Start with ammonia, nitrite, nitrate, and pH — advice unlocks from there.",
+                detail: outOfRange[0].detail,
               }
-            : data.livestock.length === 0
+            : anomalies[0]
               ? {
-                  label: "Add livestock",
-                  href: "/livestock",
-                  detail: "Stock the tank so targets tighten to the animals you keep.",
+                  label: "Open charts",
+                  href: "/charts",
+                  detail: anomalies[0].detail,
                 }
-              : {
-                  label: "Log a test",
-                  href: "/tests",
-                  detail: "Everything looks calm — a quick check keeps the trend line honest.",
-                }
+              : Object.keys(data.latest).length === 0
+                ? {
+                    label: "Log first test",
+                    href: "/tests",
+                    detail: "Start with ammonia, nitrite, nitrate, and pH — advice unlocks from there.",
+                  }
+                : data.livestock.length === 0
+                  ? {
+                      label: "Add livestock",
+                      href: "/livestock",
+                      detail: "Stock the tank so targets tighten to the animals you keep.",
+                    }
+                  : {
+                      label: "Log a test",
+                      href: "/tests",
+                      detail: "Everything looks calm — a quick check keeps the trend line honest.",
+                    }
+
+  const waterChangePanel = (
+    <RemindersPanel
+      tank={data.tank}
+      suggestedPercent={changeSuggestion?.percent ?? null}
+      suggestionDetail={changeSuggestion?.detail ?? null}
+    />
+  )
 
   return (
     <PullToRefresh>
-      <div className="space-y-6">
+      <div className="space-y-5 sm:space-y-6">
         <PageHero
           kicker={fw ? "Freshwater dashboard" : "Reef dashboard"}
           title={data.tank.name}
@@ -154,15 +161,9 @@ export default async function HomePage() {
           actions={<CsvExport tests={data.tests} />}
         />
 
-        <TodayStrip
-          overdue={overdue}
-          soon={soon}
-          outOfRange={outOfRange}
-          anomalies={anomalies}
-          primary={primary}
-        />
+        <AttentionPanel reminders={reminders} advice={advice} primary={primary} />
 
-        <NotificationsPanel reminders={reminders} advice={advice} />
+        {promoteWaterChange ? waterChangePanel : null}
 
         {Object.keys(data.latest).length === 0 ? (
           <EmptyState
@@ -173,19 +174,8 @@ export default async function HomePage() {
             actionLabel="Log your first test"
           />
         ) : (
-          <div className="tt-stagger space-y-3">
-            <LatestReadings latest={data.latest} />
-          </div>
+          <LatestReadings latest={data.latest} waterType={waterType} targets={targets} />
         )}
-
-        <TestAdvicePanel
-          compact
-          tank={data.tank}
-          latest={data.latest}
-          livestock={data.livestock}
-          tests={testPoints}
-          waterChanges={data.waterChanges.map((change) => ({ changed_at: change.changed_at }))}
-        />
 
         {data.livestock.length === 0 ? (
           <EmptyState
@@ -199,32 +189,16 @@ export default async function HomePage() {
             actionHref="/livestock"
             actionLabel="Add livestock"
           />
-        ) : null}
+        ) : (
+          <HomeStockingSummaries
+            tank={data.tank}
+            livestock={data.livestock}
+            nitrateWarning={nitrateWarning}
+          />
+        )}
 
-        <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-          <div className="space-y-6">
-            <BioloadGauge tank={data.tank} livestock={data.livestock} nitrateWarning={nitrateWarning} />
-            <div id="reminders">
-              <RemindersPanel
-                tank={data.tank}
-                suggestedPercent={changeSuggestion?.percent ?? null}
-                suggestionDetail={changeSuggestion?.detail ?? null}
-              />
-            </div>
-          </div>
-          <Suspense
-            fallback={
-              <CleanupCrewPanel
-                tank={data.tank}
-                livestock={data.livestock}
-                catalog={[]}
-                latest={data.latest}
-              />
-            }
-          >
-            <HomeCleanupCrew tank={data.tank} livestock={data.livestock} latest={data.latest} />
-          </Suspense>
-        </div>
+        {!promoteWaterChange ? waterChangePanel : null}
+
         <ParameterTargetsPanel tank={data.tank} livestock={data.livestock} />
       </div>
     </PullToRefresh>

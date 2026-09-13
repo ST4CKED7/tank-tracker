@@ -12,7 +12,6 @@ import {
 } from "@/lib/parameters"
 import {
   resolveDashboardTargets,
-  tankParameterTargets,
   type ResolvedTarget,
   type TargetSource,
 } from "@/lib/parameter-targets"
@@ -25,7 +24,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 function sourceCopy(source: TargetSource, freshwater: boolean) {
-  if (source === "custom") return "Your custom targets"
+  if (source === "custom") return "Your custom target"
   if (source === "livestock") return "Based on livestock targets"
   return `Typical ${freshwater ? "freshwater" : waterTypeLabel("saltwater")} default`
 }
@@ -45,8 +44,9 @@ export function ParameterTargetsPanel({
     () => resolveDashboardTargets({ tank, livestock, prefs }),
     [tank, livestock, prefs],
   )
-  const custom = tankParameterTargets(tank)
-  const hasCustom = Object.keys(custom).length > 0
+  const hasCustom = (Object.entries(resolved) as [ParameterKey, ResolvedTarget][]).some(
+    ([, range]) => range.source === "custom",
+  )
   const [editing, setEditing] = useState(false)
   const [pending, startTransition] = useTransition()
 
@@ -61,8 +61,8 @@ export function ParameterTargetsPanel({
             {editing
               ? "Edit the min–max range you want advice and suggestions to use. Values save in your display units."
               : hasCustom
-                ? "Using your custom targets. Livestock/typical defaults still apply where you haven’t overridden."
-                : "Defaults come from livestock overlap when available, otherwise typical targets for this water type."}
+                ? "Custom overrides are marked below. Everything else still uses livestock or typical defaults."
+                : "Defaults come from livestock overlap when available, otherwise typical targets for this water type. See Livestock for the raw species intersection."}
           </CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">

@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useUnits } from "@/components/units-provider"
 import { formatTimerClock, useTestTimers } from "@/components/test-timer-provider"
-import { Star } from "lucide-react"
+import { Star, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const MANUAL_KITS: KitId[] = ["other", "instruments"]
@@ -83,6 +83,7 @@ export function TestLogger({
   const [drops, setDrops] = useState(20)
   const [value, setValue] = useState(waterType === "freshwater" ? "7.2" : "8.2")
   const [pendingFavorite, startFavorite] = useTransition()
+  const [browseAllKits, setBrowseAllKits] = useState(false)
   const lastKitForGuides = useRef<KitId | null>(null)
 
   function setKit(next: KitId) {
@@ -267,14 +268,29 @@ export function TestLogger({
             </div>
           ) : null}
 
-          {grouped.map((group) => (
-            <div key={group.category} className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                {group.label}
+          <div className="lg:hidden">
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 w-full justify-between"
+              aria-expanded={browseAllKits}
+              onClick={() => setBrowseAllKits((open) => !open)}
+            >
+              {browseAllKits ? "Hide kit catalog" : "Browse all kits"}
+              <ChevronDown className={cn("size-4 transition-transform", browseAllKits && "rotate-180")} />
+            </Button>
+          </div>
+
+          <div className={cn("space-y-4", !browseAllKits && "hidden lg:block")}>
+            {grouped.map((group) => (
+              <div key={group.category} className="space-y-2">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  {group.label}
+                </div>
+                <div className="space-y-2">{group.items.map(renderKitRow)}</div>
               </div>
-              <div className="space-y-2">{group.items.map(renderKitRow)}</div>
-            </div>
-          ))}
+            ))}
+          </div>
           <p className="text-[11px] text-muted-foreground">{KIT_DISCLAIMER}</p>
         </CardContent>
       </Card>

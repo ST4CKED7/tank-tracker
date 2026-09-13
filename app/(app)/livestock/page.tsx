@@ -9,6 +9,7 @@ import { dashboardParameterKeys, displayRange, isFreshwater, parameterMeta } fro
 import { getDashboardData } from "@/lib/queries"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { unitPrefsFromTank } from "@/lib/units"
+import Link from "next/link"
 
 export default async function LivestockPage() {
   const data = await getDashboardData({
@@ -51,19 +52,27 @@ export default async function LivestockPage() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Combined recommended ranges</CardTitle>
+          <CardTitle>Livestock parameter overlap</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-2 sm:grid-cols-2">
-          {dashboardParameterKeys(waterType).map((key) => {
-            const range = ranges[key]
-            if (!range) return null
-            const shown = displayRange(key, range, prefs)
-            return (
-              <div key={key} className="rounded-xl border border-primary/10 bg-background/40 px-3 py-2 text-sm">
-                <span className="font-medium">{meta[key].label}</span> {shown.min}–{shown.max} {meta[key].unit}
-              </div>
-            )
-          })}
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Intersection of species ranges — used as defaults for Home targets unless you set custom ones.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {dashboardParameterKeys(waterType).map((key) => {
+              const range = ranges[key]
+              if (!range) return null
+              const shown = displayRange(key, range, prefs)
+              return (
+                <div key={key} className="rounded-xl border border-primary/10 bg-background/40 px-3 py-2 text-sm">
+                  <span className="font-medium">{meta[key].label}</span> {shown.min}–{shown.max} {meta[key].unit}
+                </div>
+              )
+            })}
+          </div>
+          <Link href="/#targets" className="inline-flex text-sm font-medium text-primary hover:underline">
+            Edit active targets on Home
+          </Link>
         </CardContent>
       </Card>
       <LivestockManager tank={data.tank} livestock={data.livestock} catalog={data.catalog} latest={data.latest} />

@@ -25,7 +25,7 @@ import {
 
 const LINKS = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/tests", label: "Log tests", icon: FlaskConical },
+  { href: "/tests", label: "Tests", icon: FlaskConical },
   { href: "/charts", label: "Charts", icon: ChartLine },
   { href: "/cycle", label: "Cycle", icon: Beaker },
   { href: "/livestock", label: "Livestock", icon: Fish },
@@ -37,8 +37,8 @@ const LINKS = [
 const BOTTOM_LINKS = [
   { href: "/", label: "Home", icon: Home },
   { href: "/tests", label: "Tests", icon: FlaskConical },
-  { href: "/livestock", label: "Stock", icon: Fish },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/charts", label: "Charts", icon: ChartLine },
+  { href: "/livestock", label: "Livestock", icon: Fish },
 ]
 
 function linkActive(pathname: string, href: string) {

@@ -5,27 +5,12 @@ import { buildTestAdvice, type AdviceSeverity } from "@/lib/test-advice"
 import { unitPrefsFromTank } from "@/lib/units"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { adviceSeverityToTone, severityRowClass } from "@/lib/severity-ui"
 import { staggerStyle } from "@/lib/motion"
 import { AlertTriangle, CheckCircle2, Info, Leaf, Waves, Wrench } from "lucide-react"
 
-function severityStyles(severity: AdviceSeverity) {
-  switch (severity) {
-    case "urgent":
-      return "border-teal-700/30 bg-teal-700/8 dark:border-teal-400/25 dark:bg-teal-400/10"
-    case "action":
-      return "border-sky-600/25 bg-sky-500/8 dark:border-sky-400/25 dark:bg-sky-400/10"
-    case "watch":
-      return "border-primary/20 bg-primary/5"
-    case "ok":
-      return "border-emerald-500/25 bg-emerald-500/8"
-    default:
-      return "border-primary/15 bg-background/50"
-  }
-}
-
 function sourceLabel(source?: "livestock" | "typical" | "trend" | "custom", freshwater?: boolean) {
-  if (source === "custom") return "Your custom targets"
+  if (source === "custom") return "Your custom target"
   if (source === "livestock") return "Based on livestock targets"
   if (source === "typical") return freshwater ? "Typical freshwater default" : "Typical reef default"
   if (source === "trend") return "From recent trend"
@@ -35,7 +20,7 @@ function sourceLabel(source?: "livestock" | "typical" | "trend" | "custom", fres
 function SeverityIcon({ severity }: { severity: AdviceSeverity }) {
   if (severity === "ok") return <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
   if (severity === "urgent" || severity === "action") {
-    return <AlertTriangle className="size-4 text-teal-800 dark:text-teal-200" />
+    return <AlertTriangle className="size-4 text-destructive" />
   }
   if (severity === "info") return <Info className="size-4 text-primary" />
   return <Wrench className="size-4 text-muted-foreground" />
@@ -89,7 +74,7 @@ export function TestAdvicePanel({
             <div
               key={item.id}
               style={staggerStyle(index)}
-              className={cn("space-y-2 rounded-xl border px-3 py-3", severityStyles(item.severity))}
+              className={`space-y-2 rounded-xl border px-3 py-3 ${severityRowClass(adviceSeverityToTone(item.severity))}`}
             >
               <div className="flex items-start gap-2">
                 <SeverityIcon severity={item.severity} />

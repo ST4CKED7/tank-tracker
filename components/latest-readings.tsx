@@ -1,10 +1,11 @@
 "use client"
 
-import { displayRange, parameterMeta, type ParameterKey } from "@/lib/parameters"
+import { displayRange, dashboardParameterKeys, parameterMeta, type ParameterKey, type WaterType } from "@/lib/parameters"
 import type { Tables } from "@/lib/database.types"
 import { Button } from "@/components/ui/button"
 import { useUnits } from "@/components/units-provider"
 import { displayParam } from "@/lib/units"
+import { cn } from "@/lib/utils"
 
 export function CsvExport({ tests }: { tests: Tables<"test_logs">[] }) {
   const system = useUnits()
@@ -31,27 +32,50 @@ export function CsvExport({ tests }: { tests: Tables<"test_logs">[] }) {
   )
 }
 
-export function LatestReadings({ latest }: { latest: Partial<Record<ParameterKey, number>> }) {
+export function LatestReadings({
+  latest,
+  waterType = "saltwater",
+  targets,
+}: {
+  latest: Partial<Record<ParameterKey, number>>
+  waterType?: WaterType
+  targets?: Partial<Record<ParameterKey, { min: number; max: number }>>
+}) {
   const system = useUnits()
-  const meta = parameterMeta(system)
-  const keys = Object.keys(meta) as ParameterKey[]
+  const meta = parameterMeta(system, waterType)
+  const keys = dashboardParameterKeys(waterType)
+
   return (
     <div className="tt-stagger grid grid-cols-2 gap-2 md:grid-cols-3">
-      {keys.map((key, index) => (
-        <div
-          key={key}
-          style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
-          className="min-w-0 rounded-2xl border border-primary/10 bg-card/80 p-2.5 shadow-sm backdrop-blur sm:p-3"
-        >
-          <div className="truncate text-[10px] uppercase tracking-wide text-muted-foreground sm:text-xs">
-            {meta[key].label}
+      {keys.map((key, index) => {
+        const value = latest[key]
+        const target = targets?.[key]
+        const outOfRange =
+          value != null && target != null && (value < target.min || value > target.max)
+        return (
+          <div
+            key={key}
+            style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+            className={cn(
+              "min-w-0 rounded-2xl border bg-card/80 p-2.5 shadow-sm backdrop-blur sm:p-3",
+              outOfRange ? "border-destructive/35 bg-destructive/5" : "border-primary/10",
+            )}
+          >
+            <div className="truncate text-[10px] uppercase tracking-wide text-muted-foreground sm:text-xs">
+              {meta[key].label}
+            </div>
+            <div className="text-base font-semibold tabular-nums sm:text-lg">
+              {value == null ? "—" : displayParam(key, value, system)}
+              <span className="ml-1 text-[10px] font-normal text-muted-foreground sm:text-xs">{meta[key].unit}</span>
+            </div>
+            {outOfRange && target ? (
+              <div className="mt-0.5 text-[10px] text-destructive sm:text-xs">
+                Target {displayParam(key, target.min, system)}–{displayParam(key, target.max, system)}
+              </div>
+            ) : null}
           </div>
-          <div className="text-base font-semibold tabular-nums sm:text-lg">
-            {latest[key] == null ? "—" : displayParam(key, latest[key]!, system)}
-            <span className="ml-1 text-[10px] font-normal text-muted-foreground sm:text-xs">{meta[key].unit}</span>
-          </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

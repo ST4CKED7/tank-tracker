@@ -11,11 +11,17 @@ import { parseSumpMedia } from "@/lib/sump-media"
 import { parseTankType } from "@/lib/tank-profiles"
 import { defaultTimeZone, listTimeZones } from "@/lib/timezones"
 import { isKitId, normalizeFavoriteKits, toggleFavoriteKitList, DEFAULT_FAVORITE_KIT } from "@/lib/kits"
-import { parseLivestockSex, type LivestockSex } from "@/lib/bioload"
+import { parseLivestockSex, type LivestockRow, type LivestockSex } from "@/lib/bioload"
 import { parseTankIcon, parseTankIconColor } from "@/lib/tank-icons"
 import { parseTankTheme } from "@/lib/tank-themes"
 import { dashboardParameterKeys } from "@/lib/parameters"
-import { parseParameterTargets, toStoredTargetRange } from "@/lib/parameter-targets"
+import {
+  defaultParameterTarget,
+  parseParameterTargets,
+  tankParameterTargets,
+  targetsNearlyEqual,
+  toStoredTargetRange,
+} from "@/lib/parameter-targets"
 
 async function tankPrefs(supabase: Awaited<ReturnType<typeof createClient>>, tankId: string): Promise<UnitPrefs> {
   const { data } = await supabase
@@ -223,7 +229,7 @@ export async function updateParameterTargets(formData: FormData) {
   const prefs = await tankPrefs(supabase, tankId)
   const { data: tank } = await supabase
     .from("tanks")
-    .select("water_type")
+    .select("id, water_type, parameter_targets")
     .eq("id", tankId)
     .eq("user_id", userId)
     .maybeSingle()
@@ -243,7 +249,28 @@ export async function updateParameterTargets(formData: FormData) {
     return
   }
 
+  const { data: livestockRows } = await supabase
+    .from("livestock")
+    .select("*, species:species_catalog(*)")
+    .eq("tank_id", tankId)
+    .eq("user_id", userId)
+
+  const livestock = (livestockRows ?? [])
+    .map((row) => {
+      const species = Array.isArray(row.species) ? row.species[0] : row.species
+      return species ? ({ ...row, species } as LivestockRow) : null
+    })
+    .filter((row): row is LivestockRow => row !== null)
+
+  const existing = tankParameterTargets(tank)
+  const dashboardKeys = new Set(dashboardParameterKeys(waterType))
   const next: Record<string, { min: number; max: number }> = {}
+
+  // Keep custom overrides for parameters not on this form (e.g. reef-only keys on mixed data).
+  for (const [key, range] of Object.entries(existing)) {
+    if (!dashboardKeys.has(key as ParameterKey)) next[key] = range
+  }
+
   for (const key of dashboardParameterKeys(waterType)) {
     const minRaw = formData.get(`${key}_min`)
     const maxRaw = formData.get(`${key}_max`)
@@ -251,7 +278,17 @@ export async function updateParameterTargets(formData: FormData) {
     const minDisplay = Number(minRaw)
     const maxDisplay = Number(maxRaw)
     if (!Number.isFinite(minDisplay) || !Number.isFinite(maxDisplay)) continue
-    next[key] = toStoredTargetRange(key, minDisplay, maxDisplay, prefs)
+    const submitted = toStoredTargetRange(key, minDisplay, maxDisplay, prefs)
+    const fallback = defaultParameterTarget({
+      key,
+      tank,
+      livestock,
+      prefs,
+    })
+    // Only store true overrides — unchanged fields stay livestock/typical.
+    if (!fallback || !targetsNearlyEqual(submitted, fallback)) {
+      next[key] = submitted
+    }
   }
 
   const { error } = await supabase

@@ -30,10 +30,8 @@ export function parseParameterTargets(raw: unknown): ParameterTargetMap {
   return out
 }
 
-export function tankParameterTargets(tank: Tank | null | undefined): ParameterTargetMap {
-  return parseParameterTargets(
-    tank && "parameter_targets" in tank ? (tank as Tank & { parameter_targets?: unknown }).parameter_targets : null,
-  )
+export function tankParameterTargets(tank: { parameter_targets?: unknown } | null | undefined): ParameterTargetMap {
+  return parseParameterTargets(tank?.parameter_targets ?? null)
 }
 
 export function resolveParameterTarget(input: {
@@ -42,10 +40,25 @@ export function resolveParameterTarget(input: {
   livestock: LivestockRow[]
   prefs: UnitPrefs
 }): ResolvedTarget | null {
-  const waterType: WaterType = isFreshwater(input.tank.water_type) ? "freshwater" : "saltwater"
   const custom = tankParameterTargets(input.tank)[input.key]
-  if (custom) return { ...custom, source: "custom" }
+  if (custom) {
+    const fallback = defaultParameterTarget(input)
+    // Treat “custom that matches the default” as not overridden (heals full-form saves).
+    if (!fallback || !targetsNearlyEqual(custom, fallback)) {
+      return { ...custom, source: "custom" }
+    }
+  }
+  return defaultParameterTarget(input)
+}
 
+/** Livestock / typical window — ignores any custom overrides on the tank. */
+export function defaultParameterTarget(input: {
+  key: ParameterKey
+  tank: Pick<Tank, "water_type">
+  livestock: LivestockRow[]
+  prefs: UnitPrefs
+}): ResolvedTarget | null {
+  const waterType: WaterType = isFreshwater(input.tank.water_type) ? "freshwater" : "saltwater"
   const livestock = intersectRanges(input.livestock)[input.key]
   if (livestock) {
     return { min: livestock.min, max: livestock.max, source: "livestock" }
@@ -54,6 +67,10 @@ export function resolveParameterTarget(input: {
   const established = parameterMeta(input.prefs, waterType)[input.key].establishedTarget
   if (established) return { ...established, source: "typical" }
   return null
+}
+
+export function targetsNearlyEqual(a: TargetRange, b: TargetRange, epsilon = 0.001) {
+  return Math.abs(a.min - b.min) <= epsilon && Math.abs(a.max - b.max) <= epsilon
 }
 
 /** Resolved windows for dashboard / advice — custom overrides livestock / typical. */

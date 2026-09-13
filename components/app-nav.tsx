@@ -28,7 +28,7 @@ import {
 
 const LINKS = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/tanks", label: "All tanks", icon: LayoutGrid },
+  { href: "/tanks", label: "Tanks", icon: LayoutGrid },
   { href: "/tests", label: "Tests", icon: FlaskConical },
   { href: "/charts", label: "Charts", icon: ChartLine },
   { href: "/cycle", label: "Cycle", icon: Beaker },
@@ -38,6 +38,9 @@ const LINKS = [
   { href: "/equipment", label: "Gear", icon: Wrench },
   { href: "/settings", label: "Settings", icon: Settings },
 ]
+
+/** Desktop top-nav omits Home — the brand mark already goes there. */
+const DESKTOP_LINKS = LINKS.filter((link) => link.href !== "/")
 
 /** Four fixed tabs; everything else lives behind the mobile "More" sheet. */
 const BOTTOM_LINKS = [
@@ -85,7 +88,7 @@ export function AppNav({
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-primary/15 bg-background/95 shadow-sm shadow-primary/5 backdrop-blur-md md:bg-background/80 md:backdrop-blur-xl pt-[env(safe-area-inset-top)]">
-        <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2.5 sm:px-4">
           <Link
             href="/"
             className="relative z-10 flex shrink-0 items-center gap-2 font-semibold tracking-tight"
@@ -93,17 +96,17 @@ export function AppNav({
             <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/30 sm:size-8">
               <Waves className="size-4" />
             </span>
-            <span className="hidden sm:inline">Tank Tracker</span>
+            <span className="hidden lg:inline">Tank Tracker</span>
           </Link>
 
           <TankSwitcher
             tanks={tanks}
             activeTankId={activeTankId}
-            className="min-w-0 flex-1 sm:max-w-[14rem] md:flex-none md:w-[13.5rem]"
+            className="min-w-0 flex-1 sm:max-w-[13rem] lg:flex-none lg:w-[12.5rem]"
           />
 
-          <nav className="ml-auto hidden min-w-0 items-center gap-0.5 text-sm md:flex">
-            {LINKS.map((link) => (
+          <nav className="ml-auto hidden min-w-0 items-center gap-1 text-sm lg:flex">
+            {DESKTOP_LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -119,15 +122,15 @@ export function AppNav({
             {activeTankId ? (
               <Link
                 href="/settings#units"
-                className="ml-1 shrink-0 whitespace-nowrap rounded-full border border-primary/20 bg-background/60 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                className="ml-1 shrink-0 whitespace-nowrap rounded-full border border-primary/20 bg-background/60 px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
                 title="Change display units"
               >
                 {unitSummary}
               </Link>
             ) : null}
-            <ThemeToggle />
+            <ThemeToggle className="size-8 md:size-8" />
             <form action={signOut} className="shrink-0">
-              <SubmitButton variant="ghost" size="sm" pendingLabel="…">
+              <SubmitButton variant="ghost" size="sm" className="h-8 px-2.5" pendingLabel="…">
                 Sign out
               </SubmitButton>
             </form>
@@ -137,7 +140,7 @@ export function AppNav({
             type="button"
             variant="outline"
             size="icon"
-            className="size-10 shrink-0 md:hidden"
+            className="size-10 shrink-0 lg:hidden"
             aria-expanded={menuOpen}
             aria-controls="mobile-nav-menu"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
@@ -150,7 +153,7 @@ export function AppNav({
 
       {/* Mobile "More" sheet — shared by the header button and the bottom More tab. */}
       {menuOpen ? (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="More navigation">
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="More navigation">
           <button
             type="button"
             aria-label="Close menu"

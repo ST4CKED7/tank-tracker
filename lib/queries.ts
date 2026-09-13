@@ -13,8 +13,10 @@ export type DashboardData = {
   tests: Tables<"test_logs">[]
   waterChanges: Tables<"water_changes">[]
   doses: Tables<"dose_logs">[]
+  doseSchedules: Tables<"dose_schedules">[]
   equipment: Tables<"equipment">[]
   catalog: Tables<"species_catalog">[]
+  photos: Tables<"tank_photos">[]
   latest: Partial<Record<ParameterKey, number>>
 }
 
@@ -24,8 +26,10 @@ export type DashboardOptions = {
   tests?: boolean | number
   waterChanges?: boolean | number
   doses?: boolean | number
+  doseSchedules?: boolean
   equipment?: boolean
   catalog?: boolean
+  photos?: boolean | number
 }
 
 const EMPTY: Omit<DashboardData, "tank" | "tanks"> = {
@@ -33,8 +37,10 @@ const EMPTY: Omit<DashboardData, "tank" | "tanks"> = {
   tests: [],
   waterChanges: [],
   doses: [],
+  doseSchedules: [],
   equipment: [],
   catalog: [],
+  photos: [],
   latest: {},
 }
 
@@ -125,8 +131,10 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
     tests = 400,
     waterChanges = 100,
     doses = 100,
+    doseSchedules = false,
     equipment = true,
     catalog = true,
+    photos = false,
   } = options
 
   const { supabase } = await getAuthedUserId()
@@ -138,13 +146,15 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
   const testsLimit = limitOf(tests, 400)
   const changesLimit = limitOf(waterChanges, 100)
   const dosesLimit = limitOf(doses, 100)
+  const photosLimit = limitOf(photos, 40)
   const livestockMode = livestock === "lean" ? "lean" : livestock ? "full" : "off"
   const livestockSelect =
     livestockMode === "lean"
       ? "id, tank_id, species_id, quantity, size_cm, coral_size, sex, nickname, notes, added_on, species:species_catalog(id, common_name, temp_min, temp_max, salinity_min, salinity_max, ph_min, ph_max, alk_min, alk_max, ca_min, ca_max, no3_min, no3_max, po4_min, po4_max)"
       : "*, species:species_catalog(*)"
 
-  const [livestockRes, testsRes, changesRes, dosesRes, equipmentRes, catalogRes] = await Promise.all([
+  const [livestockRes, testsRes, changesRes, dosesRes, schedulesRes, equipmentRes, catalogRes, photosRes] =
+    await Promise.all([
     livestockMode !== "off"
       ? supabase
           .from("livestock")
@@ -180,6 +190,9 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
           .order("dosed_at", { ascending: false })
           .limit(dosesLimit)
       : Promise.resolve({ data: [] as Tables<"dose_logs">[] }),
+    doseSchedules
+      ? supabase.from("dose_schedules").select("*").eq("tank_id", tank.id).order("product")
+      : Promise.resolve({ data: [] as Tables<"dose_schedules">[] }),
     equipment
       ? supabase.from("equipment").select("*").eq("tank_id", tank.id).order("name")
       : Promise.resolve({ data: [] as Tables<"equipment">[] }),
@@ -190,6 +203,14 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
           .eq("water_type", tank.water_type ?? "saltwater")
           .order("common_name")
       : Promise.resolve({ data: [] as Tables<"species_catalog">[] }),
+    photosLimit > 0
+      ? supabase
+          .from("tank_photos")
+          .select("*")
+          .eq("tank_id", tank.id)
+          .order("taken_at", { ascending: false })
+          .limit(photosLimit)
+      : Promise.resolve({ data: [] as Tables<"tank_photos">[] }),
   ])
 
   const testRows = (testsRes.data ?? []) as Tables<"test_logs">[]
@@ -201,8 +222,10 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
     tests: testRows,
     waterChanges: (changesRes.data ?? []) as Tables<"water_changes">[],
     doses: (dosesRes.data ?? []) as Tables<"dose_logs">[],
+    doseSchedules: (schedulesRes.data ?? []) as Tables<"dose_schedules">[],
     equipment: (equipmentRes.data ?? []) as Tables<"equipment">[],
     catalog: (catalogRes.data ?? []) as Tables<"species_catalog">[],
+    photos: (photosRes.data ?? []) as Tables<"tank_photos">[],
     latest: latestFromTests(testRows),
   }
 }

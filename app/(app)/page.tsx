@@ -7,6 +7,7 @@ import { PullToRefresh } from "@/components/pull-to-refresh"
 import { ParameterTargetsPanel } from "@/components/parameter-targets-panel"
 import { RemindersPanel } from "@/components/reminders-panel"
 import { TankForm } from "@/components/tank-form"
+import { TankPhotoTimeline } from "@/components/tank-photo-timeline"
 import { detectAnomalies } from "@/lib/anomalies"
 import { nitrateRisingDespiteChanges } from "@/lib/bioload"
 import { isFreshwater } from "@/lib/parameters"
@@ -25,8 +26,10 @@ export default async function HomePage() {
     tests: 40,
     waterChanges: 20,
     doses: false,
+    doseSchedules: true,
     equipment: true,
     catalog: false,
+    photos: 24,
   })
   if (!data.tank) {
     return (
@@ -42,6 +45,7 @@ export default async function HomePage() {
     lastWaterChange: data.waterChanges[0]?.changed_at,
     lastTest: data.tests[0]?.tested_at,
     equipment: data.equipment,
+    doseSchedules: data.doseSchedules,
   })
   const nitrateWarning = nitrateRisingDespiteChanges(
     data.tests.filter((t) => t.parameter === "nitrate").map((t) => ({ testedAt: t.tested_at, value: Number(t.value) })),
@@ -109,7 +113,12 @@ export default async function HomePage() {
           }
         : overdue[0]
           ? {
-              label: overdue[0].kind === "equipment" ? "Open gear" : "Open tests",
+              label:
+                overdue[0].kind === "equipment"
+                  ? "Open gear"
+                  : overdue[0].kind === "dose"
+                    ? "Open dosing"
+                    : "Open tests",
               href: overdue[0].href,
               detail: overdue[0].detail,
             }
@@ -198,6 +207,8 @@ export default async function HomePage() {
         )}
 
         {!promoteWaterChange ? waterChangePanel : null}
+
+        <TankPhotoTimeline tankId={data.tank.id} photos={data.photos} />
 
         <ParameterTargetsPanel tank={data.tank} livestock={data.livestock} />
       </div>

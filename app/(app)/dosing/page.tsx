@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { DoseSchedulePanel } from "@/components/dose-schedule-panel"
 import { DosingPanel } from "@/components/dosing-panel"
 import { PageHero } from "@/components/page-hero"
 import { TankForm } from "@/components/tank-form"
@@ -14,6 +15,7 @@ export default async function DosingPage() {
     tests: 24,
     waterChanges: false,
     doses: 100,
+    doseSchedules: true,
     equipment: false,
     catalog: false,
   })
@@ -38,6 +40,7 @@ export default async function DosingPage() {
             : "Suggestions use your latest tests and tank volume for buffers and calcium — confirm on the bottle, then log."
         }
       />
+      <DoseSchedulePanel tankId={data.tank.id} schedules={data.doseSchedules} freshwater={fw} />
       <Suspense fallback={null}>
         <DosingPanel
           tankId={data.tank.id}

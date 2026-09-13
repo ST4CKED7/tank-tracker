@@ -55,6 +55,7 @@ function writeIgnoredMap(map: IgnoredMap) {
 function KindIcon({ kind }: { kind: NotificationItem["kind"] }) {
   if (kind === "equipment") return <Wrench className="size-4 shrink-0" />
   if (kind === "water_change") return <Droplets className="size-4 shrink-0" />
+  if (kind === "dose") return <Droplets className="size-4 shrink-0" />
   return <FlaskConical className="size-4 shrink-0" />
 }
 

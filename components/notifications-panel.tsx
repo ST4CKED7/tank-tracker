@@ -11,7 +11,7 @@ export type NotificationItem = {
   href: string
   tone: "urgent" | "soon" | "watch"
   meta: string
-  kind: "water_change" | "test" | "equipment" | "chemistry"
+  kind: "water_change" | "test" | "equipment" | "dose" | "chemistry"
 }
 
 export function buildNotificationItems(

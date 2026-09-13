@@ -53,6 +53,59 @@ export type Database = {
           },
         ]
       }
+      dose_schedules: {
+        Row: {
+          amount: number
+          created_at: string
+          every_days: number
+          id: string
+          last_dosed_at: string | null
+          notes: string | null
+          product: string
+          starts_at: string | null
+          tank_id: string
+          target_parameter: string | null
+          unit: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          every_days?: number
+          id?: string
+          last_dosed_at?: string | null
+          notes?: string | null
+          product: string
+          starts_at?: string | null
+          tank_id: string
+          target_parameter?: string | null
+          unit?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          every_days?: number
+          id?: string
+          last_dosed_at?: string | null
+          notes?: string | null
+          product?: string
+          starts_at?: string | null
+          tank_id?: string
+          target_parameter?: string | null
+          unit?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dose_schedules_tank_id_fkey"
+            columns: ["tank_id"]
+            isOneToOne: false
+            referencedRelation: "tanks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipment: {
         Row: {
           equipment_type: string
@@ -278,6 +331,47 @@ export type Database = {
         }
         Update: Partial<Database["public"]["Tables"]["tanks"]["Insert"]>
         Relationships: []
+      }
+      tank_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          public_url: string
+          storage_path: string
+          taken_at: string
+          tank_id: string
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          public_url: string
+          storage_path: string
+          taken_at?: string
+          tank_id: string
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          public_url?: string
+          storage_path?: string
+          taken_at?: string
+          tank_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tank_photos_tank_id_fkey"
+            columns: ["tank_id"]
+            isOneToOne: false
+            referencedRelation: "tanks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       test_logs: {
         Row: {

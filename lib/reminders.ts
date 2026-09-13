@@ -4,7 +4,7 @@ import type { Tables } from "@/lib/database.types"
 import { saltMixForGallons, waterChangeVolumeGallons } from "@/lib/salt-mix"
 import { formatVolume, unitPrefsFromTank } from "@/lib/units"
 
-export type ReminderKind = "water_change" | "test" | "equipment"
+export type ReminderKind = "water_change" | "test" | "equipment" | "dose"
 
 export type Reminder = {
   id: string
@@ -25,6 +25,7 @@ export function buildReminders(input: {
   lastWaterChange?: string | null
   lastTest?: string | null
   equipment: Tables<"equipment">[]
+  doseSchedules?: Tables<"dose_schedules">[]
   now?: Date
 }): Reminder[] {
   const now = input.now ?? new Date()
@@ -82,6 +83,25 @@ export function buildReminders(input: {
       now,
       kind: "equipment",
       href: "/equipment",
+    }))
+  }
+
+  for (const item of input.doseSchedules ?? []) {
+    const last = item.last_dosed_at
+      ? parseISO(item.last_dosed_at)
+      : item.starts_at
+        ? parseISO(item.starts_at)
+        : parseISO(input.tank.created_at)
+    const due = addDays(last, item.every_days)
+    const targetBit = item.target_parameter ? ` · ${item.target_parameter}` : ""
+    reminders.push(makeReminder({
+      id: `dose-${item.id}`,
+      title: `Dose ${item.product}`,
+      detail: `${item.amount} ${item.unit}${targetBit} · every ${item.every_days} day${item.every_days === 1 ? "" : "s"}`,
+      due,
+      now,
+      kind: "dose",
+      href: "/dosing#schedules",
     }))
   }
 

@@ -79,6 +79,8 @@ export async function deleteTank(formData: FormData) {
     supabase.from("test_logs").delete().eq("tank_id", tankId),
     supabase.from("water_changes").delete().eq("tank_id", tankId),
     supabase.from("dose_logs").delete().eq("tank_id", tankId),
+    supabase.from("dose_schedules").delete().eq("tank_id", tankId),
+    supabase.from("tank_photos").delete().eq("tank_id", tankId),
     supabase.from("equipment").delete().eq("tank_id", tankId),
   ])
 
@@ -491,7 +493,123 @@ export async function logDose(formData: FormData) {
     dosed_at: String(formData.get("dosed_at") || new Date().toISOString()),
   })
   if (error) throw error
-  revalidateAppPaths("/dosing")
+  revalidateAppPaths("/dosing", "/")
+}
+
+export async function upsertDoseSchedule(formData: FormData) {
+  const { supabase, userId } = await requireUser()
+  const id = String(formData.get("id") || "")
+  const payload = {
+    user_id: userId,
+    tank_id: String(formData.get("tank_id")),
+    product: String(formData.get("product")),
+    amount: Number(formData.get("amount")),
+    unit: String(formData.get("unit") || "ml"),
+    target_parameter: String(formData.get("target_parameter") || "") || null,
+    every_days: Math.max(1, Number(formData.get("every_days") || 1)),
+    last_dosed_at: String(formData.get("last_dosed_at") || "") || null,
+    starts_at: String(formData.get("starts_at") || "") || null,
+    notes: String(formData.get("notes") || "") || null,
+  }
+  if (id) {
+    const { error } = await supabase.from("dose_schedules").update(payload).eq("id", id)
+    if (error) throw error
+  } else {
+    const { error } = await supabase.from("dose_schedules").insert(payload)
+    if (error) throw error
+  }
+  revalidateAppPaths("/", "/dosing")
+}
+
+export async function completeDoseSchedule(formData: FormData) {
+  const { supabase, userId } = await requireUser()
+  const id = String(formData.get("id") || "")
+  if (!id) return
+
+  const { data: schedule } = await supabase
+    .from("dose_schedules")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle()
+  if (!schedule) return
+
+  const today = new Date().toISOString().slice(0, 10)
+  const [{ error: logError }, { error: updateError }] = await Promise.all([
+    supabase.from("dose_logs").insert({
+      user_id: userId,
+      tank_id: schedule.tank_id,
+      product: schedule.product,
+      amount: Number(schedule.amount),
+      unit: schedule.unit,
+      target_parameter: schedule.target_parameter,
+      dosed_at: new Date().toISOString(),
+    }),
+    supabase.from("dose_schedules").update({ last_dosed_at: today }).eq("id", id),
+  ])
+  if (logError) throw logError
+  if (updateError) throw updateError
+  revalidateAppPaths("/", "/dosing")
+}
+
+export async function deleteDoseSchedule(formData: FormData) {
+  const { supabase } = await requireUser()
+  const { error } = await supabase.from("dose_schedules").delete().eq("id", String(formData.get("id")))
+  if (error) throw error
+  revalidateAppPaths("/", "/dosing")
+}
+
+export async function uploadTankPhoto(formData: FormData) {
+  const { supabase, userId } = await requireUser()
+  const tankId = String(formData.get("tank_id") || "")
+  const caption = String(formData.get("caption") || "").trim() || null
+  const takenAtRaw = String(formData.get("taken_at") || "")
+  const file = formData.get("photo")
+  if (!tankId || !(file instanceof File) || file.size === 0) return
+
+  const { data: owned } = await supabase.from("tanks").select("id").eq("id", tankId).eq("user_id", userId).maybeSingle()
+  if (!owned) return
+
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg"
+  const path = `${userId}/${tankId}/${crypto.randomUUID()}.${ext}`
+  const { error: uploadError } = await supabase.storage.from("tank-photos").upload(path, file, {
+    contentType: file.type || "image/jpeg",
+    upsert: false,
+  })
+  if (uploadError) throw uploadError
+
+  const { data: publicData } = supabase.storage.from("tank-photos").getPublicUrl(path)
+  const taken_at = takenAtRaw ? new Date(takenAtRaw).toISOString() : new Date().toISOString()
+
+  const { error } = await supabase.from("tank_photos").insert({
+    user_id: userId,
+    tank_id: tankId,
+    storage_path: path,
+    public_url: publicData.publicUrl,
+    caption,
+    taken_at,
+  })
+  if (error) throw error
+  revalidateAppPaths("/")
+}
+
+export async function deleteTankPhoto(formData: FormData) {
+  const { supabase, userId } = await requireUser()
+  const id = String(formData.get("id") || "")
+  if (!id) return
+
+  const { data: photo } = await supabase
+    .from("tank_photos")
+    .select("id, storage_path")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle()
+  if (!photo) return
+
+  await supabase.storage.from("tank-photos").remove([photo.storage_path])
+  const { error } = await supabase.from("tank_photos").delete().eq("id", id)
+  if (error) throw error
+  revalidateAppPaths("/")
 }
 
 export async function upsertEquipment(formData: FormData) {

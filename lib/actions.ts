@@ -17,6 +17,7 @@ import { parseTankTheme } from "@/lib/tank-themes"
 import { dashboardParameterKeys } from "@/lib/parameters"
 import {
   defaultParameterTarget,
+  normalizeStoredTemperatureTarget,
   parseParameterTargets,
   tankParameterTargets,
   targetsNearlyEqual,
@@ -280,7 +281,9 @@ export async function updateParameterTargets(formData: FormData) {
     const minDisplay = Number(minRaw)
     const maxDisplay = Number(maxRaw)
     if (!Number.isFinite(minDisplay) || !Number.isFinite(maxDisplay)) continue
-    const submitted = toStoredTargetRange(key, minDisplay, maxDisplay, prefs)
+    const submittedRaw = toStoredTargetRange(key, minDisplay, maxDisplay, prefs)
+    const submitted =
+      key === "temperature" ? normalizeStoredTemperatureTarget(submittedRaw) : submittedRaw
     const fallback = defaultParameterTarget({
       key,
       tank,
@@ -564,19 +567,36 @@ export async function uploadTankPhoto(formData: FormData) {
   const tankId = String(formData.get("tank_id") || "")
   const caption = String(formData.get("caption") || "").trim() || null
   const takenAtRaw = String(formData.get("taken_at") || "")
-  const file = formData.get("photo")
-  if (!tankId || !(file instanceof File) || file.size === 0) return
+  const raw = formData.get("photo")
+  if (!tankId || !(raw instanceof Blob) || raw.size === 0) {
+    return { ok: false as const, error: "Choose a photo first." }
+  }
+  if (raw.size > 7_500_000) {
+    return { ok: false as const, error: "Photo is too large. Try again — we’ll compress camera shots automatically." }
+  }
 
   const { data: owned } = await supabase.from("tanks").select("id").eq("id", tankId).eq("user_id", userId).maybeSingle()
-  if (!owned) return
+  if (!owned) {
+    return { ok: false as const, error: "Tank not found." }
+  }
 
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg"
-  const path = `${userId}/${tankId}/${crypto.randomUUID()}.${ext}`
-  const { error: uploadError } = await supabase.storage.from("tank-photos").upload(path, file, {
-    contentType: file.type || "image/jpeg",
+  const originalName = raw instanceof File && raw.name ? raw.name : "tank-photo.jpg"
+  const mime = raw.type || "image/jpeg"
+  const ext =
+    mime === "image/png"
+      ? "png"
+      : mime === "image/webp"
+        ? "webp"
+        : (originalName.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg"
+  const path = `${userId}/${tankId}/${crypto.randomUUID()}.${ext === "jpeg" ? "jpg" : ext}`
+
+  const { error: uploadError } = await supabase.storage.from("tank-photos").upload(path, raw, {
+    contentType: mime,
     upsert: false,
   })
-  if (uploadError) throw uploadError
+  if (uploadError) {
+    return { ok: false as const, error: uploadError.message || "Upload failed." }
+  }
 
   const { data: publicData } = supabase.storage.from("tank-photos").getPublicUrl(path)
   const taken_at = takenAtRaw ? new Date(takenAtRaw).toISOString() : new Date().toISOString()
@@ -589,8 +609,13 @@ export async function uploadTankPhoto(formData: FormData) {
     caption,
     taken_at,
   })
-  if (error) throw error
+  if (error) {
+    await supabase.storage.from("tank-photos").remove([path])
+    return { ok: false as const, error: error.message || "Could not save photo." }
+  }
+
   revalidateAppPaths("/")
+  return { ok: true as const }
 }
 
 export async function deleteTankPhoto(formData: FormData) {

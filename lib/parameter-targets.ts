@@ -8,13 +8,27 @@ import {
   type ParameterKey,
   type WaterType,
 } from "@/lib/parameters"
-import { toStoredTemp, type UnitPrefs } from "@/lib/units"
+import { cToF, toStoredTemp, type UnitPrefs } from "@/lib/units"
 
 export type TargetRange = { min: number; max: number }
 export type ParameterTargetMap = Partial<Record<ParameterKey, TargetRange>>
 export type TargetSource = "custom" | "livestock" | "typical"
 
 export type ResolvedTarget = TargetRange & { source: TargetSource }
+
+/**
+ * Custom targets are stored in °F (same as readings). A prior save bug wrote °C
+ * display values into storage — e.g. 23.9–26.7 instead of ~75–80 — which then
+ * renders as roughly −4.5 to −2.9 °C after another F→C pass.
+ */
+export function normalizeStoredTemperatureTarget(range: TargetRange): TargetRange {
+  const { min, max } = range
+  // Plausible aquarium °C; impossible as °F for tropical/temperate tanks.
+  if (max <= 45 && min >= 5 && min < 50) {
+    return { min: cToF(min), max: cToF(max) }
+  }
+  return range
+}
 
 export function parseParameterTargets(raw: unknown): ParameterTargetMap {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
@@ -25,7 +39,8 @@ export function parseParameterTargets(raw: unknown): ParameterTargetMap {
     const min = Number((entry as { min?: unknown }).min)
     const max = Number((entry as { max?: unknown }).max)
     if (!Number.isFinite(min) || !Number.isFinite(max)) continue
-    out[key] = { min, max: Math.max(min, max) }
+    const range = { min, max: Math.max(min, max) }
+    out[key] = key === "temperature" ? normalizeStoredTemperatureTarget(range) : range
   }
   return out
 }

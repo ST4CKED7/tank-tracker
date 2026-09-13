@@ -1,15 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { deleteTankPhoto, uploadTankPhoto } from "@/lib/actions"
 import type { Tables } from "@/lib/database.types"
 import { SubmitButton } from "@/components/submit-button"
 import { EmptyState } from "@/components/empty-state"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { format, parseISO } from "date-fns"
-import { Camera, X } from "lucide-react"
+import { Camera, ImagePlus, X } from "lucide-react"
+
+const ACCEPT = "image/*,image/jpeg,image/png,image/webp,image/heic,image/heif"
 
 export function TankPhotoTimeline({
   tankId,
@@ -19,6 +22,32 @@ export function TankPhotoTimeline({
   photos: Tables<"tank_photos">[]
 }) {
   const [preview, setPreview] = useState<string | null>(null)
+  const [selectedName, setSelectedName] = useState<string | null>(null)
+  const [localPreview, setLocalPreview] = useState<string | null>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const libraryInputRef = useRef<HTMLInputElement>(null)
+
+  function assignFile(file: File | null) {
+    if (!photoInputRef.current) return
+    if (!file) {
+      photoInputRef.current.value = ""
+      setSelectedName(null)
+      setLocalPreview((current) => {
+        if (current) URL.revokeObjectURL(current)
+        return null
+      })
+      return
+    }
+    const transfer = new DataTransfer()
+    transfer.items.add(file)
+    photoInputRef.current.files = transfer.files
+    setSelectedName(file.name)
+    setLocalPreview((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return URL.createObjectURL(file)
+    })
+  }
 
   return (
     <Card id="photos" className="scroll-mt-24">
@@ -28,36 +57,96 @@ export function TankPhotoTimeline({
           Tank photos
         </CardTitle>
         <CardDescription>
-          Build a timeline of aquascape, algae, and livestock changes. Newest first.
+          Build a timeline of aquascape, algae, and livestock changes. Newest first. On your phone, use Take photo to
+          open the camera.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <form action={uploadTankPhoto} className="grid gap-3 rounded-xl border border-primary/15 bg-primary/5 p-3 sm:grid-cols-[1fr_1fr_auto]">
+        <form action={uploadTankPhoto} className="space-y-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
           <input type="hidden" name="tank_id" value={tankId} />
-          <div className="space-y-1 sm:col-span-2">
-            <Label htmlFor="photo">Photo</Label>
-            <Input
-              id="photo"
-              name="photo"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-              required
-              className="cursor-pointer"
-            />
+          {/* Submitted file — kept in sync from camera / library pickers */}
+          <input
+            ref={photoInputRef}
+            id="photo"
+            name="photo"
+            type="file"
+            accept={ACCEPT}
+            required
+            className="sr-only"
+            tabIndex={-1}
+            onChange={(event) => assignFile(event.target.files?.[0] ?? null)}
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept={ACCEPT}
+            capture="environment"
+            className="sr-only"
+            tabIndex={-1}
+            onChange={(event) => assignFile(event.target.files?.[0] ?? null)}
+          />
+          <input
+            ref={libraryInputRef}
+            type="file"
+            accept={ACCEPT}
+            className="sr-only"
+            tabIndex={-1}
+            onChange={(event) => assignFile(event.target.files?.[0] ?? null)}
+          />
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button
+              type="button"
+              variant="default"
+              className="min-h-11 w-full"
+              onClick={() => cameraInputRef.current?.click()}
+            >
+              <Camera className="size-4" />
+              Take photo
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 w-full"
+              onClick={() => libraryInputRef.current?.click()}
+            >
+              <ImagePlus className="size-4" />
+              Choose from library
+            </Button>
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="taken_at">Taken</Label>
-            <Input id="taken_at" name="taken_at" type="datetime-local" />
+
+          {selectedName ? (
+            <div className="flex items-center gap-3 rounded-lg border border-primary/15 bg-background/70 px-3 py-2">
+              {localPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={localPreview} alt="" className="size-12 shrink-0 rounded-md object-cover" />
+              ) : null}
+              <div className="min-w-0 flex-1 text-sm">
+                <div className="truncate font-medium">{selectedName}</div>
+                <div className="text-xs text-muted-foreground">Ready to upload</div>
+              </div>
+              <Button type="button" size="icon" variant="ghost" className="size-8" onClick={() => assignFile(null)}>
+                <X className="size-4" />
+                <span className="sr-only">Clear photo</span>
+              </Button>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Pick a photo with the camera or from your library first.</p>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="taken_at">Taken</Label>
+              <Input id="taken_at" name="taken_at" type="datetime-local" />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="caption">Caption</Label>
+              <Input id="caption" name="caption" placeholder="After water change…" />
+            </div>
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="caption">Caption</Label>
-            <Input id="caption" name="caption" placeholder="After water change…" />
-          </div>
-          <div className="flex items-end sm:col-span-2 lg:col-span-1">
-            <SubmitButton className="min-h-11 w-full" pendingLabel="Uploading…" successMessage="Photo added">
-              Add photo
-            </SubmitButton>
-          </div>
+          <SubmitButton className="min-h-11 w-full" pendingLabel="Uploading…" successMessage="Photo added">
+            Add photo
+          </SubmitButton>
         </form>
 
         {photos.length === 0 ? (

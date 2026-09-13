@@ -34,7 +34,7 @@ export default async function AppGroupLayout({ children }: { children: ReactNode
           activeTankId={tank?.id ?? null}
           unitSummary={`${prefs.volume === "L" ? "L" : "gal"} · ${prefs.temp === "C" ? "°C" : "°F"}`}
         />
-        <main className="tt-fade-in mx-auto w-full max-w-6xl flex-1 scroll-mt-24 px-3 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:px-4 sm:py-6 md:pb-6">
+        <main className="tt-fade-in mx-auto w-full max-w-6xl flex-1 scroll-mt-24 px-3 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:px-4 sm:py-6 lg:pb-6">
           {children}
         </main>
         <TestTimerBubbles />

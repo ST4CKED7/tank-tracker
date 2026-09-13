@@ -4,7 +4,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { signOut } from "@/lib/actions"
-import { Button } from "@/components/ui/button"
 import { SubmitButton } from "@/components/submit-button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { TankSwitcher, type SwitcherTank } from "@/components/tank-switcher"
@@ -18,12 +17,10 @@ import {
   FlaskConical,
   Home,
   LayoutGrid,
-  Menu,
   MoreHorizontal,
   Settings,
   Waves,
   Wrench,
-  X,
 } from "lucide-react"
 
 const LINKS = [
@@ -135,23 +132,10 @@ export function AppNav({
               </SubmitButton>
             </form>
           </nav>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="size-10 shrink-0 lg:hidden"
-            aria-expanded={menuOpen}
-            aria-controls="mobile-nav-menu"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-          </Button>
         </div>
       </header>
 
-      {/* Mobile "More" sheet — shared by the header button and the bottom More tab. */}
+      {/* Mobile "More" sheet — opened from the bottom More tab. */}
       {menuOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="More navigation">
           <button
@@ -212,7 +196,7 @@ export function AppNav({
       ) : null}
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/15 bg-background/95 backdrop-blur-md md:hidden pb-[env(safe-area-inset-bottom)]"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/15 bg-background/95 backdrop-blur-md lg:hidden pb-[env(safe-area-inset-bottom)]"
         aria-label="Primary"
       >
         <div className="mx-auto grid max-w-6xl grid-cols-5">

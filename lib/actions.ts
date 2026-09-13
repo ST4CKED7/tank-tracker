@@ -831,7 +831,7 @@ export async function deleteParameterReminder(formData: FormData) {
 export async function enableTankShare(formData: FormData) {
   const { supabase, userId } = await requireUser()
   const tankId = String(formData.get("tank_id") || "")
-  if (!tankId) return
+  if (!tankId) return { ok: false as const, error: "Missing tank." }
 
   const { data: owned } = await supabase
     .from("tanks")
@@ -839,30 +839,30 @@ export async function enableTankShare(formData: FormData) {
     .eq("id", tankId)
     .eq("user_id", userId)
     .maybeSingle()
-  if (!owned) return
+  if (!owned) return { ok: false as const, error: "Tank not found." }
 
   const token = crypto.randomUUID().replace(/-/g, "")
-  const { error } = await supabase
-    .from("tank_shares")
-    .upsert(
-      { tank_id: tankId, user_id: userId, token },
-      { onConflict: "tank_id" },
-    )
-  if (error) throw error
+  const { error } = await supabase.from("tank_shares").upsert(
+    { tank_id: tankId, user_id: userId, token },
+    { onConflict: "tank_id" },
+  )
+  if (error) return { ok: false as const, error: error.message || "Could not create link." }
 
   revalidateAppPaths("/settings")
+  return { ok: true as const, token }
 }
 
 /** Turn off public sharing for a tank (invalidates the existing link). */
 export async function disableTankShare(formData: FormData) {
   const { supabase, userId } = await requireUser()
   const tankId = String(formData.get("tank_id") || "")
-  if (!tankId) return
+  if (!tankId) return { ok: false as const, error: "Missing tank." }
   const { error } = await supabase
     .from("tank_shares")
     .delete()
     .eq("user_id", userId)
     .eq("tank_id", tankId)
-  if (error) throw error
+  if (error) return { ok: false as const, error: error.message || "Could not remove link." }
   revalidateAppPaths("/settings")
+  return { ok: true as const }
 }

@@ -1,23 +1,32 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { Check, Copy, Link2, RefreshCw } from "lucide-react"
+import { toast } from "sonner"
 import { disableTankShare, enableTankShare } from "@/lib/actions"
+import { softHaptic } from "@/components/form-success-toast"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { SubmitButton } from "@/components/submit-button"
 
 export function TankSharePanel({
   tankId,
-  token,
+  token: initialToken,
 }: {
   tankId: string
   /** Existing share token, or null when sharing is off. */
   token: string | null
 }) {
+  const router = useRouter()
+  const [token, setToken] = useState(initialToken)
   const [shareUrl, setShareUrl] = useState("")
   const [copied, setCopied] = useState(false)
+  const [pending, startTransition] = useTransition()
+
+  useEffect(() => {
+    setToken(initialToken)
+  }, [initialToken])
 
   useEffect(() => {
     if (token) setShareUrl(`${window.location.origin}/share/${token}`)
@@ -29,10 +38,47 @@ export function TankSharePanel({
     try {
       await navigator.clipboard.writeText(shareUrl)
       setCopied(true)
+      softHaptic()
       setTimeout(() => setCopied(false), 1500)
     } catch {
-      // Clipboard blocked — user can still select the text manually.
+      // Clipboard blocked — select the field so the user can copy manually.
+      toast.message("Select the link and copy it manually.")
     }
+  }
+
+  function createOrRotate() {
+    const formData = new FormData()
+    formData.set("tank_id", tankId)
+    startTransition(async () => {
+      const result = await enableTankShare(formData)
+      if (!result?.ok) {
+        toast.error(result?.error || "Could not create share link.")
+        return
+      }
+      setToken(result.token)
+      softHaptic()
+      toast.success(token ? "New share link ready" : "Share link created", {
+        duration: 2200,
+        className: "tt-toast-success",
+      })
+      router.refresh()
+    })
+  }
+
+  function turnOff() {
+    const formData = new FormData()
+    formData.set("tank_id", tankId)
+    startTransition(async () => {
+      const result = await disableTankShare(formData)
+      if (!result?.ok) {
+        toast.error(result?.error || "Could not turn off sharing.")
+        return
+      }
+      setToken(null)
+      softHaptic()
+      toast.success("Sharing turned off", { duration: 2000, className: "tt-toast-success" })
+      router.refresh()
+    })
   }
 
   return (
@@ -62,39 +108,50 @@ export function TankSharePanel({
                 type="button"
                 variant="secondary"
                 onClick={copy}
-                className="shrink-0"
+                className="min-h-11 shrink-0 sm:min-h-9"
               >
                 {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
                 {copied ? "Copied" : "Copy"}
               </Button>
             </div>
             <div className="flex flex-wrap gap-2">
-              <form action={enableTankShare}>
-                <input type="hidden" name="tank_id" value={tankId} />
-                <SubmitButton size="sm" variant="outline" pendingLabel="Generating…">
-                  <RefreshCw className="size-4" />
-                  New link
-                </SubmitButton>
-              </form>
-              <form action={disableTankShare}>
-                <input type="hidden" name="tank_id" value={tankId} />
-                <SubmitButton size="sm" variant="ghost" pendingLabel="Turning off…">
-                  Turn off sharing
-                </SubmitButton>
-              </form>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="min-h-11 sm:min-h-8"
+                disabled={pending}
+                onClick={createOrRotate}
+              >
+                <RefreshCw className="size-4" />
+                {pending ? "Generating…" : "New link"}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="min-h-11 sm:min-h-8"
+                disabled={pending}
+                onClick={turnOff}
+              >
+                {pending ? "Turning off…" : "Turn off sharing"}
+              </Button>
             </div>
             <p className="text-xs text-muted-foreground">
               Generating a new link disables the old one.
             </p>
           </>
         ) : (
-          <form action={enableTankShare}>
-            <input type="hidden" name="tank_id" value={tankId} />
-            <SubmitButton size="sm" pendingLabel="Creating…">
-              <Link2 className="size-4" />
-              Create share link
-            </SubmitButton>
-          </form>
+          <Button
+            type="button"
+            size="sm"
+            className="min-h-11 w-full sm:min-h-8 sm:w-auto"
+            disabled={pending}
+            onClick={createOrRotate}
+          >
+            <Link2 className="size-4" />
+            {pending ? "Creating…" : "Create share link"}
+          </Button>
         )}
       </CardContent>
     </Card>

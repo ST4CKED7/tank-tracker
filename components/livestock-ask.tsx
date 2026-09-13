@@ -1,7 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { Search, X } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { ChevronLeft, ChevronRight, Search, X } from "lucide-react"
 import { addLivestock } from "@/lib/actions"
 import {
   CORAL_SIZE_LABELS,
@@ -25,6 +25,8 @@ import { useUnits } from "@/components/units-provider"
 import { displayLength, formatTempRange, lengthLabel, type UnitPrefs } from "@/lib/units"
 import { SexSelect } from "@/components/livestock-sex-select"
 
+const ASK_PAGE_SIZE = 8
+
 function speciesTempLine(species: Species, prefs: UnitPrefs) {
   return formatTempRange(species.temp_min, species.temp_max, prefs)
 }
@@ -43,12 +45,25 @@ export function LivestockAsk({
   const fw = tank.water_type === "freshwater"
   const examples = useMemo(() => suggestAskPrompts(tank, livestock, 6), [tank, livestock])
   const [ask, setAsk] = useState("")
+  const [page, setPage] = useState(0)
   const prefs = useUnits()
+
+  useEffect(() => {
+    setPage(0)
+  }, [ask])
 
   const answer = useMemo(() => {
     if (!ask.trim()) return null
-    return askLivestock(ask, catalog, tank, livestock, latest, 8)
+    return askLivestock(ask, catalog, tank, livestock, latest, 96)
   }, [ask, catalog, tank, livestock, latest])
+
+  const pageCount = answer ? Math.max(1, Math.ceil(answer.results.length / ASK_PAGE_SIZE)) : 1
+  const safePage = Math.min(page, pageCount - 1)
+  const pageResults = answer
+    ? answer.results.slice(safePage * ASK_PAGE_SIZE, safePage * ASK_PAGE_SIZE + ASK_PAGE_SIZE)
+    : []
+  const rangeStart = answer && answer.results.length > 0 ? safePage * ASK_PAGE_SIZE + 1 : 0
+  const rangeEnd = answer ? Math.min((safePage + 1) * ASK_PAGE_SIZE, answer.results.length) : 0
 
   const unitFields = (
     <>
@@ -60,6 +75,10 @@ export function LivestockAsk({
 
   const placeholder = examples[0] ?? (fw ? "Ask what to add next…" : "Ask what to add next…")
 
+  function clearAsk() {
+    setAsk("")
+    setPage(0)
+  }
   return (
     <Card>
       <CardHeader>
@@ -82,7 +101,7 @@ export function LivestockAsk({
           {ask.trim() ? (
             <button
               type="button"
-              onClick={() => setAsk("")}
+              onClick={clearAsk}
               className="absolute top-1/2 right-2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label="Clear question"
             >
@@ -117,14 +136,15 @@ export function LivestockAsk({
                 </p>
               ) : (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Showing {answer.results.length} ranked compatible pick
-                  {answer.results.length === 1 ? "" : "s"}.
+                  Showing {rangeStart}–{rangeEnd} of {answer.total} ranked compatible pick
+                  {answer.total === 1 ? "" : "s"}
+                  {pageCount > 1 ? ` · page ${safePage + 1} of ${pageCount}` : ""}.
                 </p>
               )}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-            {answer.results.map((item) => (
+            {pageResults.map((item) => (
               <form
                 key={`ask-${item.species.id}`}
                 action={addLivestock}
@@ -235,6 +255,33 @@ export function LivestockAsk({
               </form>
             ))}
             </div>
+            {pageCount > 1 ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={safePage <= 0}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                >
+                  <ChevronLeft className="size-4" />
+                  Previous
+                </Button>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {safePage + 1} / {pageCount}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={safePage >= pageCount - 1}
+                  onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                >
+                  Next
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </CardContent>

@@ -38,6 +38,8 @@ export type LivestockAskIntent = {
 export type LivestockAskResult = {
   intent: LivestockAskIntent
   results: Suggestion[]
+  /** Total compatible matches before any UI paging. */
+  total: number
   /** How the engine interpreted / softened the ask. */
   note?: string
 }
@@ -783,11 +785,11 @@ export function askLivestock(
   tank: Tank,
   livestock: LivestockRow[],
   currentParams: Partial<Record<ParameterKey, number>>,
-  limit = 10,
+  limit = 48,
 ): LivestockAskResult {
   const intent = parseLivestockAsk(query, tank, catalog)
   if (!intent.query) {
-    return { intent, results: [] }
+    return { intent, results: [], total: 0 }
   }
 
   const cuc = assessCleanupCrew(tank, livestock)
@@ -846,14 +848,16 @@ export function askLivestock(
     usedMode = "loose"
   }
 
-  const ranked = evaluated
+  const rankedAll = evaluated
     .map((suggestion) => rankCandidate(suggestion, intent, ctx))
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score
       return a.suggestion.species.common_name.localeCompare(b.suggestion.species.common_name)
     })
-    .slice(0, limit)
-    .map((row) => annotateReasons(row, intent))
+  // Cap only as a safety valve for huge catalogs; UI pages through this list.
+  const ranked = rankedAll.slice(0, limit).map((row) => annotateReasons(row, intent))
+  const total = ranked.length
+  const truncated = rankedAll.length > ranked.length
 
   let note: string | undefined
   if (usedMode === "soft") {
@@ -864,9 +868,11 @@ export function askLivestock(
     note = `Prioritizing gaps: ${[...missingRoles].map(cleanupRoleLabel).join(", ")}.`
   } else if (intent.likeSpeciesIds.length > 0) {
     note = "Using similar catalog entries to guide category and temperament."
+  } else if (truncated) {
+    note = `Showing the top ${ranked.length} matches of ${rankedAll.length} compatible options.`
   }
 
-  return { intent, results: ranked, note }
+  return { intent, results: ranked, total, note }
 }
 
 export function suggestAskPrompts(

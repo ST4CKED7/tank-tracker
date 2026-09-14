@@ -17,13 +17,21 @@ const MAX_IN_FLIGHT = 3
 let inFlight = 0
 const waitQueue: Array<() => void> = []
 
-/** Known wrong auto-matches (insects/plants) that should be re-resolved. */
+/** Known wrong auto-matches (insects/plants/shared clown morphs) that should be re-resolved. */
 const BAD_IMAGE_RE =
-  /photos\/(39295509|3027303|29616601)(?:\/|\.|$)|Allocapnia|flowering.?plant/i
+  /photos\/(39295509|3027303|29616601|28590571)(?:\/|\.|$)|Allocapnia|flowering.?plant|Clown_fish_in_the_Andaman_Coral_Reef/i
 
-function usableSrc(src?: string | null) {
+function usableSrc(src?: string | null, commonName?: string) {
   if (!src) return null
   if (BAD_IMAGE_RE.test(src)) return null
+  // Classic orange ocellaris photo must not stick on designer morphs / percula.
+  if (
+    /photos\/9045216(?:\/|\.|$)/i.test(src) &&
+    commonName &&
+    !/^ocellaris clownfish$/i.test(commonName.trim())
+  ) {
+    return null
+  }
   return src
 }
 
@@ -65,7 +73,7 @@ export function SpeciesImage({
   className?: string
   size?: "sm" | "md" | "lg"
 }) {
-  const initial = usableSrc(src)
+  const initial = usableSrc(src, commonName)
   const [url, setUrl] = useState<string | null>(initial)
   const [failed, setFailed] = useState(false)
   const [loading, setLoading] = useState(!initial && Boolean(commonName))
@@ -73,7 +81,7 @@ export function SpeciesImage({
   const dim = size === "sm" ? "size-12" : size === "lg" ? "size-20" : "size-14"
 
   useEffect(() => {
-    const next = usableSrc(src)
+    const next = usableSrc(src, commonName)
     setUrl(next)
     setFailed(false)
     setLoading(!next && Boolean(commonName))
@@ -99,7 +107,7 @@ export function SpeciesImage({
         const res = await fetch(`/api/species-image?${params}`)
         const data = (await res.json()) as { url?: string | null }
         if (cancelled) return
-        const resolved = usableSrc(data.url)
+        const resolved = usableSrc(data.url, commonName)
         if (resolved) {
           setUrl(resolved)
           if (speciesId) void cacheSpeciesImage(speciesId, resolved)

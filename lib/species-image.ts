@@ -14,6 +14,27 @@ export function tidyScientificName(scientific: string | null | undefined) {
 
 export type SpeciesImageKind = "fish" | "coral" | "invert" | "plant"
 
+/** Captive morphs / lookalikes that share a scientific name with a different-looking species. */
+const DESIGNER_OR_MORPH_RE =
+  /\b(black ice|black ocellaris|snowflake|frostbite|picasso|mocha|gladiator|wyoming|domino|misbar|designer|premium|pearl|blizzard|smudge|davinci|longfin)\b/i
+
+/** Curated photos when auto-resolve collapses morphs onto the wrong orange ocellaris image. */
+const COMMON_NAME_IMAGE_OVERRIDES: Record<string, string> = {
+  "black ocellaris clownfish":
+    "https://inaturalist-open-data.s3.amazonaws.com/photos/375609126/medium.jpeg",
+  "black ice clownfish": "https://upload.wikimedia.org/wikipedia/commons/6/68/Black_storm_Clownfish.jpg",
+  "snowflake clownfish":
+    "https://upload.wikimedia.org/wikipedia/commons/a/af/Black_storm_Clownfish_among_coral.jpg",
+  "frostbite clownfish": "https://static.inaturalist.org/photos/8164741/medium.jpg",
+  "percula clownfish": "https://upload.wikimedia.org/wikipedia/commons/0/08/Amphiprion_percula_1.jpg",
+  "brittle star": "https://inaturalist-open-data.s3.amazonaws.com/photos/104797444/medium.jpeg",
+  "serpent star": "https://inaturalist-open-data.s3.amazonaws.com/photos/15839847/medium.jpg",
+}
+
+function isDesignerOrMorphName(commonName: string) {
+  return DESIGNER_OR_MORPH_RE.test(commonName)
+}
+
 function queryVariants(
   scientificName: string | null | undefined,
   commonName: string,
@@ -26,6 +47,9 @@ function queryVariants(
     .trim()
   const binomial = scientific && scientific.includes(" ") ? scientific : null
   const isSpp = Boolean(scientificName && /\bspp?\.?\b/i.test(scientificName))
+  const morph = isDesignerOrMorphName(cleanedCommon)
+  const starSplit =
+    /^brittle star$/i.test(cleanedCommon) || /^serpent star$/i.test(cleanedCommon)
 
   // Ambiguous aquarium genera that collide with plants/insects/cars on Wikipedia & iNat.
   const kindHint =
@@ -49,14 +73,35 @@ function queryVariants(
             ]
           : []
 
+  const morphHints = morph
+    ? [
+        cleanedCommon,
+        cleanedCommon.replace(/clownfish/i, "clown fish"),
+        cleanedCommon.replace(/clownfish/i, "anemonefish"),
+        /black/i.test(cleanedCommon) ? "black ocellaris clownfish" : null,
+        /black ice/i.test(cleanedCommon) ? "Black storm Clownfish" : null,
+        /snowflake/i.test(cleanedCommon) ? "Black storm Clownfish" : null,
+        /frostbite/i.test(cleanedCommon) ? "Frostbite Clownfish" : null,
+      ]
+    : starSplit
+      ? [
+          cleanedCommon,
+          /^brittle star$/i.test(cleanedCommon) ? "Ophiothrix brittle star" : null,
+          /^brittle star$/i.test(cleanedCommon) ? "Ophiocoma scolopendrina" : null,
+          /^serpent star$/i.test(cleanedCommon) ? "Ophioderma serpent star" : null,
+          /^serpent star$/i.test(cleanedCommon) ? "Ophioderma panamense" : null,
+        ]
+      : []
+
   const variants = [
+    ...morphHints,
     ...kindHint,
     cleanedCommon,
     cleanedCommon.replace(/'/g, ""),
-    binomial,
-    // Bare genus last for corals (after "Genus coral") so Capnella ≠ stonefly on iNat.
+    // Morphs / lookalike stars that share a genus must not collapse onto one photo.
+    morph || starSplit ? null : binomial,
     isSpp && genus && kind === "coral" ? `${genus} coral` : null,
-    genus && (isSpp || !binomial) ? genus : null,
+    morph || starSplit ? null : genus && (isSpp || !binomial) ? genus : null,
     /plant|fern|moss|anubias|crypt|sword|vallis|hygrophila|rotala|ludwigia|bacopa|hairgrass|hornwort|frogbit|duckweed|lotus|buceph|bolbitis|marimo/i.test(
       `${cleanedCommon} ${scientificName ?? ""}`,
     )
@@ -198,6 +243,9 @@ export async function resolveSpeciesImageUrl(input: {
   commonName: string
   kind?: SpeciesImageKind | null
 }) {
+  const override = COMMON_NAME_IMAGE_OVERRIDES[input.commonName.trim().toLowerCase()]
+  if (override) return override
+
   const queries = queryVariants(input.scientificName, input.commonName, input.kind)
   for (const query of queries) {
     try {

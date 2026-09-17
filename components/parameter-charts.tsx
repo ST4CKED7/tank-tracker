@@ -100,10 +100,15 @@ function ChartCard({
         {meta.label} {meta.unit ? `(${meta.unit})` : ""}
       </div>
       <ResponsiveContainer width="100%" height="90%">
-        <LineChart data={data} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
+        <LineChart data={data} margin={{ top: 4, right: 8, left: 4, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.15} />
           <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={28} interval="preserveStartEnd" />
-          <YAxis width={40} tick={{ fontSize: 11 }} domain={["auto", "auto"]} />
+          <YAxis
+            width={parameter === "calcium" ? 52 : 48}
+            tick={{ fontSize: 11 }}
+            domain={["auto", "auto"]}
+            tickMargin={4}
+          />
           <Tooltip {...chartTooltipStyle} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
           {band ? (

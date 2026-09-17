@@ -47,6 +47,11 @@ export function HomeStockingSummaries({
             · {load.used.toFixed(1)} / {load.capacity.toFixed(1)} pts
           </span>
         </p>
+        <p className="mt-1 line-clamp-3 text-xs text-muted-foreground">
+          {tank.water_type === "freshwater"
+            ? "Rough stocking score: fish length × species factor + invert points, divided by display+sump volume (adjusted for tank type)."
+            : "Rough stocking score: fish length × species factor, invert points, and coral size, divided by display+sump volume (adjusted for tank type)."}
+        </p>
         {nitrateWarning ? (
           <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">Nitrate still climbing after changes</p>
         ) : null}

@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { EmptyState } from "@/components/empty-state"
 import { TestAdvicePanel } from "@/components/test-advice-panel"
 import { TestLogger } from "@/components/test-logger"
@@ -31,8 +32,8 @@ export default async function TestsPage() {
           title="Log a test"
           description={
             fw
-              ? "Star the kits you use most. Instruments starts starred for temperature and pH probes."
-              : "Star the kits you use most. Instruments starts starred for salinity, temperature, and probes."
+              ? "Star the kits you use most. Instruments starts starred for temperature."
+              : "Star the kits you use most. Instruments starts starred for salinity and temperature."
           }
         />
         {!hasTests ? (
@@ -54,12 +55,14 @@ export default async function TestsPage() {
             waterChanges={data.waterChanges.map((change) => ({ changed_at: change.changed_at }))}
           />
         )}
-        <TestLogger
-          tankId={data.tank.id}
-          waterType={waterType}
-          favoriteKitIds={data.tank.favorite_test_kits}
-          defaultKitId={data.tank.default_test_kit}
-        />
+        <Suspense fallback={null}>
+          <TestLogger
+            tankId={data.tank.id}
+            waterType={waterType}
+            favoriteKitIds={data.tank.favorite_test_kits}
+            defaultKitId={data.tank.default_test_kit}
+          />
+        </Suspense>
         <ParameterRemindersPanel
           tankId={data.tank.id}
           waterType={waterType}

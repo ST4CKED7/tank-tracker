@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { useSearchParams } from "next/navigation"
 import { logTest, toggleFavoriteTestKit } from "@/lib/actions"
-import { parameterMeta, type ParameterKey, type WaterType } from "@/lib/parameters"
+import { PARAMETER_KEYS, parameterMeta, type ParameterKey, type WaterType } from "@/lib/parameters"
 import {
   KIT_CATEGORY_LABEL,
   KIT_DISCLAIMER,
@@ -61,6 +62,12 @@ export function TestLogger({
   defaultKitId?: string | null
 }) {
   const availableKits = useMemo(() => kitsFor(waterType), [waterType])
+  const searchParams = useSearchParams()
+  const focusParameter = useMemo(() => {
+    const raw = searchParams.get("parameter")
+    return PARAMETER_KEYS.includes(raw as ParameterKey) ? (raw as ParameterKey) : null
+  }, [searchParams])
+  const appliedFocus = useRef<string | null>(null)
   const favoritesKey = Array.isArray(favoriteKitIds)
     ? favoriteKitIds.join("\0")
     : favoriteKitIds == null
@@ -108,6 +115,43 @@ export function TestLogger({
     const stored = readStoredKit(tankId, waterType)
     if (stored) setKitState(stored)
   }, [tankId, waterType])
+
+  useEffect(() => {
+    if (!focusParameter) return
+    const focusKey = `${tankId}:${focusParameter}`
+    if (appliedFocus.current === focusKey) return
+    appliedFocus.current = focusKey
+
+    const favoriteMatch = favorites
+      .map((id) => availableKits.find((item) => item.id === id))
+      .find((item) => item?.tests.includes(focusParameter))
+    const anyMatch = availableKits.find(
+      (item) => item.tests.includes(focusParameter) && !MANUAL_KITS.includes(item.id),
+    )
+    const nextKit = (favoriteMatch?.id ?? anyMatch?.id ?? "other") as KitId
+    setKit(nextKit)
+
+    const nextGuides = TEST_GUIDES.filter((guide) => guide.kit === nextKit)
+    const matchingGuide = nextGuides.find((guide) => guide.parameter === focusParameter)
+    if (matchingGuide) {
+      setGuideIdState(matchingGuide.id)
+      try {
+        sessionStorage.setItem(guideStorageKey(tankId), `${nextKit}:${matchingGuide.id}`)
+      } catch {
+        /* ignore */
+      }
+      if (matchingGuide.method === "titration") {
+        setDrops(matchingGuide.parameter === "alkalinity" ? 8 : 20)
+      }
+    }
+
+    window.setTimeout(() => {
+      document.getElementById(`manual-${focusParameter}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      })
+    }, 80)
+  }, [focusParameter, tankId, favorites, availableKits])
 
   useEffect(() => {
     const nextFavorites = normalizeFavoriteKits(
@@ -254,8 +298,8 @@ export function TestLogger({
         <CardHeader>
           <CardTitle>Choose a kit or method</CardTitle>
           <CardDescription>
-            Star the kits you use — they pin under Favorites. Instruments starts starred so salinity, temperature, and
-            probes are easy to find.
+            Star the kits you use — they pin under Favorites. Instruments starts starred so salinity and temperature
+            are easy to find.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -560,9 +604,7 @@ function LogForm({
 
 function manualKeys(waterType: WaterType, kit: KitId): ParameterKey[] {
   if (kit === "instruments") {
-    return waterType === "freshwater"
-      ? ["temperature", "ph"]
-      : ["salinity", "temperature", "ph"]
+    return waterType === "freshwater" ? ["temperature"] : ["salinity", "temperature"]
   }
   return waterType === "freshwater"
     ? ["ph", "ammonia", "nitrite", "nitrate", "alkalinity", "temperature"]
@@ -585,7 +627,12 @@ function ManualParams({
       {keys.map((parameter) => {
         const meta = parameterMeta(system, waterType)[parameter]
         return (
-          <form key={parameter} action={logTest} className="space-y-3 rounded-xl border border-primary/10 bg-background/40 p-4">
+          <form
+            key={parameter}
+            id={`manual-${parameter}`}
+            action={logTest}
+            className="space-y-3 rounded-xl border border-primary/10 bg-background/40 p-4"
+          >
             <input type="hidden" name="tank_id" value={tankId} />
             <input type="hidden" name="parameter" value={parameter} />
             <input type="hidden" name="unit" value={meta.unit} />
@@ -625,9 +672,7 @@ function ManualParams({
                   ? system.temp === "C"
                     ? "Digital thermometer or controller readout (°C)."
                     : "Digital thermometer or controller readout (°F)."
-                  : parameter === "ph" && kit === "instruments"
-                    ? "Calibrated pH probe or meter."
-                    : "Enter the value from your kit, strip, or meter."}
+                  : "Enter the value from your kit, strip, or meter."}
             </p>
             <SubmitButton className="min-h-11" pendingLabel="Saving…" successMessage={`${meta.label} saved`}>
               Save {meta.label}

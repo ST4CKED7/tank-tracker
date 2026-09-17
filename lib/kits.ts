@@ -159,9 +159,9 @@ export const KITS: KitDef[] = [
     shortLabel: "Instruments",
     brand: "Instruments",
     category: "instrument",
-    tests: ["salinity", "temperature", "ph"],
+    tests: ["salinity", "temperature"],
     waterTypes: ["freshwater", "saltwater"],
-    blurb: "Meters and probes outside a reagent kit.",
+    blurb: "Refractometer, thermometer, or controller readouts.",
   },
   {
     id: "other",
@@ -192,7 +192,7 @@ export function kitById(id: KitId) {
 export function kitsFor(waterType: WaterType) {
   return KITS.filter((kit) => kit.waterTypes.includes(waterType)).map((kit) => {
     if (kit.id === "instruments" && waterType === "freshwater") {
-      return { ...kit, tests: ["temperature", "ph"], blurb: "Thermometer, pH probe, or digital meter." }
+      return { ...kit, tests: ["temperature"], blurb: "Thermometer or controller readout." }
     }
     if (kit.id === "other" && waterType === "freshwater") {
       return { ...kit, tests: ["temperature", "alkalinity", "ph", "nitrate"], blurb: "Any kit, strip, or meter not listed." }
@@ -218,6 +218,64 @@ export function defaultKitFor(waterType: WaterType, preferred?: string | null): 
   if (preferred && available.some((kit) => kit.id === preferred)) return preferred as KitId
   if (available.some((kit) => kit.id === "instruments")) return "instruments"
   return available[0]?.id ?? "other"
+}
+
+function kitSupportsManualParameter(kitId: KitId, parameter: string, waterType: WaterType) {
+  if (kitId === "instruments") {
+    return waterType === "freshwater"
+      ? parameter === "temperature"
+      : parameter === "salinity" || parameter === "temperature"
+  }
+  if (kitId === "other") return true
+  return false
+}
+
+/** Pick the user's preferred kit + guide for a single-parameter retest. */
+export function resolvePreferredTest(
+  parameter: string,
+  waterType: WaterType,
+  favoriteKitIds?: unknown,
+  defaultKitId?: string | null,
+): { kitId: KitId; kitLabel: string; guide: TestGuide | null } {
+  const available = kitsFor(waterType)
+  const favorites = normalizeFavoriteKits(
+    favoriteKitIds != null ? favoriteKitIds : [defaultKitId, DEFAULT_FAVORITE_KIT],
+    waterType,
+  )
+
+  const guideFor = (kitId: KitId) =>
+    TEST_GUIDES.find((guide) => guide.kit === kitId && guide.parameter === parameter) ?? null
+
+  // Prefer an explicit default kit when it can run this parameter.
+  const preferredOrder: KitId[] = []
+  if (defaultKitId && isKitId(defaultKitId) && available.some((kit) => kit.id === defaultKitId)) {
+    preferredOrder.push(defaultKitId)
+  }
+  for (const kitId of favorites) {
+    if (!preferredOrder.includes(kitId)) preferredOrder.push(kitId)
+  }
+
+  for (const kitId of preferredOrder) {
+    const kit = available.find((item) => item.id === kitId)
+    if (!kit) continue
+    const guide = guideFor(kitId)
+    if (guide) return { kitId, kitLabel: kit.label, guide }
+    if (kitSupportsManualParameter(kitId, parameter, waterType)) {
+      return { kitId, kitLabel: kit.label, guide: null }
+    }
+  }
+
+  for (const kit of available) {
+    const guide = guideFor(kit.id)
+    if (guide) return { kitId: kit.id, kitLabel: kit.label, guide }
+  }
+
+  const other = available.find((kit) => kit.id === "other")
+  return {
+    kitId: "other",
+    kitLabel: other?.label ?? "Other / manual",
+    guide: null,
+  }
 }
 
 /** Default favorite when a tank has never customized the list. */

@@ -22,7 +22,7 @@ import { Fish, FlaskConical } from "lucide-react"
 export default async function HomePage() {
   const data = await getDashboardData({
     livestock: true,
-    tests: 40,
+    tests: 120,
     waterChanges: 20,
     doses: false,
     doseSchedules: true,
@@ -188,7 +188,16 @@ export default async function HomePage() {
             actionLabel="Log your first test"
           />
         ) : (
-          <LatestReadings latest={data.latest} waterType={waterType} targets={targets} />
+          <LatestReadings
+            latest={data.latest}
+            waterType={waterType}
+            targets={targets}
+            tests={data.tests}
+            reminders={data.parameterReminders}
+            tankId={data.tank.id}
+            favoriteKitIds={data.tank.favorite_test_kits}
+            defaultKitId={data.tank.default_test_kit}
+          />
         )}
 
         {data.livestock.length === 0 ? (

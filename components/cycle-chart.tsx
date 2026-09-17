@@ -18,10 +18,10 @@ export function CycleChart({ tests }: { tests: Tables<"test_logs">[] }) {
   return (
     <div className="h-72 rounded-2xl border border-primary/10 bg-card/80 p-2 shadow-sm backdrop-blur sm:h-80 sm:p-3">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+        <LineChart data={data} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.15} />
           <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={28} interval="preserveStartEnd" />
-          <YAxis width={40} tick={{ fontSize: 11 }} />
+          <YAxis width={48} tick={{ fontSize: 11 }} tickMargin={4} />
           <Tooltip {...chartTooltipStyle} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
           <Line type="monotone" dataKey="ammonia" stroke="var(--chart-2)" strokeWidth={2} dot={false} />

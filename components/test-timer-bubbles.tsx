@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 import { X, Timer, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,11 +14,17 @@ import { cn } from "@/lib/utils"
 
 export function TestTimerBubbles() {
   const { timers, now, dismissTimer } = useTestTimers()
-  if (timers.length === 0) return null
+  const [mounted, setMounted] = useState(false)
 
-  return (
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (timers.length === 0 || !mounted) return null
+
+  return createPortal(
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 flex flex-col items-end gap-2 px-3 md:bottom-6 md:right-6 md:left-auto md:px-0"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[100] flex flex-col items-end gap-2 px-3 md:bottom-6 md:right-6 md:left-auto md:px-0"
       aria-live="polite"
     >
       {timers.map((timer) => {
@@ -72,6 +80,7 @@ export function TestTimerBubbles() {
           </div>
         )
       })}
-    </div>
+    </div>,
+    document.body,
   )
 }

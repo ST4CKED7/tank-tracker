@@ -29,6 +29,30 @@ const COMMON_NAME_IMAGE_OVERRIDES: Record<string, string> = {
   "percula clownfish": "https://upload.wikimedia.org/wikipedia/commons/0/08/Amphiprion_percula_1.jpg",
   "brittle star": "https://inaturalist-open-data.s3.amazonaws.com/photos/104797444/medium.jpeg",
   "serpent star": "https://inaturalist-open-data.s3.amazonaws.com/photos/15839847/medium.jpg",
+  // Every splendens morph shares one binomial, so pin the finnage each card describes.
+  "betta / siamese fighting fish":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Bojownik_syjamski.jpg/500px-Bojownik_syjamski.jpg",
+  "crowntail betta": "https://upload.wikimedia.org/wikipedia/commons/4/44/Hector_betta_splendens.jpg",
+  "halfmoon betta":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Betta_halfmoon.jpg/500px-Betta_halfmoon.jpg",
+  "plakat betta":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/A_male_Plakat_%28short-finned_Siamese_fighting_fish%29.jpg/500px-A_male_Plakat_%28short-finned_Siamese_fighting_fish%29.jpg",
+  "peaceful betta / imbellis":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Betta_imbellis_%28male%29_20100512.jpg/500px-Betta_imbellis_%28male%29_20100512.jpg",
+  // Spotted morph of Danio rerio; the binomial only yields striped zebra danios.
+  "leopard danio":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Leopard_Danio_%284050116019%29.jpg/500px-Leopard_Danio_%284050116019%29.jpg",
+  // Poecilia sphenops morphs; the binomial only yields wild-type olive mollies.
+  "black molly":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Molly_Black_Sail_fin_120_copy.jpg/500px-Molly_Black_Sail_fin_120_copy.jpg",
+  "balloon molly":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Balloon_Molly_female.jpg/500px-Balloon_Molly_female.jpg",
+  // "Lyretail" alone matches lyretail mollies rather than Xiphophorus.
+  "lyretail swordtail":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Xiphophorus_hellerii_lyretail_female_pregnant_02.jpg/500px-Xiphophorus_hellerii_lyretail_female_pregnant_02.jpg",
+  // "Wagtail" matches the bird genus Motacilla, not the platy morph.
+  "wagtail platy":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Gold_crescent_platy.JPG/500px-Gold_crescent_platy.JPG",
 }
 
 function isDesignerOrMorphName(commonName: string) {

@@ -1,8 +1,7 @@
 "use client"
 
-import { useEffect, useRef } from "react"
-import { useFormStatus } from "react-dom"
 import { toast } from "sonner"
+import type { ActionResult } from "@/lib/action-result"
 
 function softHaptic() {
   try {
@@ -14,23 +13,43 @@ function softHaptic() {
   }
 }
 
-/** Place inside a server-action <form> to toast + haptic when the submit finishes. */
-export function FormSuccessToast({ message }: { message: string }) {
-  const { pending } = useFormStatus()
-  const wasPending = useRef(false)
+/** redirect() / notFound() travel as thrown errors — never swallow them. */
+function isFrameworkSignal(error: unknown) {
+  const digest = (error as { digest?: unknown } | null)?.digest
+  return typeof digest === "string" && digest.startsWith("NEXT_")
+}
 
-  useEffect(() => {
-    if (wasPending.current && !pending) {
-      softHaptic()
-      toast.success(message, {
-        duration: 2400,
-        className: "tt-toast-success",
-      })
+const GENERIC_ERROR = "Could not save. Check your connection and try again."
+
+/**
+ * Wrap a server action for use as a <form action>. The success toast fires only
+ * after the server confirms the write; a returned or thrown failure toasts the
+ * reason instead, and `onSuccess` (e.g. closing a dialog) is skipped.
+ */
+export function withActionToast(
+  action: (formData: FormData) => Promise<ActionResult>,
+  successMessage: string,
+  options?: { onSuccess?: () => void; errorMessage?: string },
+) {
+  return async (formData: FormData) => {
+    let result: ActionResult
+    try {
+      result = await action(formData)
+    } catch (error) {
+      if (isFrameworkSignal(error)) throw error
+      toast.error(options?.errorMessage ?? GENERIC_ERROR)
+      return
     }
-    wasPending.current = pending
-  }, [pending, message])
 
-  return null
+    if (!result?.ok) {
+      toast.error(result?.error || options?.errorMessage || GENERIC_ERROR)
+      return
+    }
+
+    softHaptic()
+    toast.success(successMessage, { duration: 2400, className: "tt-toast-success" })
+    options?.onSuccess?.()
+  }
 }
 
 export { softHaptic }

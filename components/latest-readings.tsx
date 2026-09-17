@@ -104,13 +104,15 @@ function ReadingChartButton({
           type="button"
           aria-label={`Show ${label} chart`}
           className={cn(
-            "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
+            "relative inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
+            // Invisible 44px-tall hit area so wet fingers don't need to be precise.
+            "after:absolute after:inset-x-0 after:-inset-y-1.5",
             "hover:bg-muted hover:text-foreground",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
             open && "bg-muted text-foreground",
           )}
         >
-          <ChartLine className="size-3.5" aria-hidden="true" />
+          <ChartLine className="size-4" aria-hidden="true" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" side="bottom" className="w-[min(18rem,calc(100vw-2rem))]">
@@ -199,7 +201,7 @@ export function LatestReadings({
               <div className="min-w-0 truncate text-[10px] uppercase tracking-wide text-muted-foreground sm:text-xs">
                 {meta[key].label}
               </div>
-              <div className="flex shrink-0 items-center gap-0.5">
+              <div className="flex shrink-0 items-center gap-1">
                 <QuickRetestButton
                   parameter={key}
                   label={meta[key].label}

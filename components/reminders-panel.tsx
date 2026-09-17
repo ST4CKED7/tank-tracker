@@ -6,6 +6,7 @@ import { waterChangeGallons } from "@/lib/reminders"
 import { saltMixForGallons } from "@/lib/salt-mix"
 import type { Tank } from "@/lib/bioload"
 import { SubmitButton } from "@/components/submit-button"
+import { withActionToast } from "@/components/form-success-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -57,7 +58,10 @@ export function RemindersPanel({
           </p>
         ) : null}
 
-        <form action={logWaterChange} className="space-y-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
+        <form
+          action={withActionToast(logWaterChange, "Water change logged")}
+          className="space-y-3 rounded-xl border border-primary/15 bg-primary/5 p-3"
+        >
           <input type="hidden" name="tank_id" value={tank.id} />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
@@ -103,7 +107,7 @@ export function RemindersPanel({
               ? "Match temperature to the tank. Condition tap water before adding."
               : "Based on ~½ cup salt mix per US gallon (~35 g/L). Brands differ — verify salinity with a refractometer."}
           </p>
-          <SubmitButton className="w-full min-h-11" pendingLabel="Logging…" successMessage="Water change logged">
+          <SubmitButton className="w-full min-h-11" pendingLabel="Logging…">
             Log water change
           </SubmitButton>
         </form>

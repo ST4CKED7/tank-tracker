@@ -19,6 +19,7 @@ import {
 } from "@/lib/kits"
 import { Button } from "@/components/ui/button"
 import { SubmitButton } from "@/components/submit-button"
+import { withActionToast } from "@/components/form-success-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -496,7 +497,10 @@ function LogForm({
   const colors = guide.colorValues
 
   return (
-    <form action={logTest} className="grid gap-3 rounded-xl border border-primary/10 bg-background/40 p-4 sm:grid-cols-2">
+    <form
+      action={withActionToast(logTest, "Reading saved")}
+      className="grid gap-3 rounded-xl border border-primary/10 bg-background/40 p-4 sm:grid-cols-2"
+    >
       <input type="hidden" name="tank_id" value={tankId} />
       <input type="hidden" name="parameter" value={guide.parameter} />
       <input type="hidden" name="unit" value={meta.unit} />
@@ -507,6 +511,7 @@ function LogForm({
           <Input
             id="drops"
             type="number"
+            inputMode="numeric"
             min={0}
             step={1}
             value={drops}
@@ -595,7 +600,7 @@ function LogForm({
         <Label htmlFor="notes">Notes</Label>
         <Textarea id="notes" name="notes" placeholder="Optional — kit lot, time of day, etc." />
       </div>
-      <SubmitButton className="min-h-11" pendingLabel="Saving…" successMessage="Reading saved">
+      <SubmitButton className="min-h-11" pendingLabel="Saving…">
         Save reading
       </SubmitButton>
     </form>
@@ -630,7 +635,7 @@ function ManualParams({
           <form
             key={parameter}
             id={`manual-${parameter}`}
-            action={logTest}
+            action={withActionToast(logTest, `${meta.label} saved`)}
             className="space-y-3 rounded-xl border border-primary/10 bg-background/40 p-4"
           >
             <input type="hidden" name="tank_id" value={tankId} />
@@ -674,7 +679,7 @@ function ManualParams({
                     : "Digital thermometer or controller readout (°F)."
                   : "Enter the value from your kit, strip, or meter."}
             </p>
-            <SubmitButton className="min-h-11" pendingLabel="Saving…" successMessage={`${meta.label} saved`}>
+            <SubmitButton className="min-h-11" pendingLabel="Saving…">
               Save {meta.label}
             </SubmitButton>
           </form>

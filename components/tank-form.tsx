@@ -13,7 +13,7 @@ import {
   parseTankIcon,
   parseTankIconColor,
 } from "@/components/tank-icon"
-import { softHaptic } from "@/components/form-success-toast"
+import { softHaptic, withActionToast } from "@/components/form-success-toast"
 import { TankIconCropDialog } from "@/components/tank-icon-crop-dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -158,7 +158,10 @@ export function TankForm({
   }, [colorTheme, tank?.color_theme])
 
   const fields = (
-    <form action={formAction ?? upsertTank} className="grid gap-3 sm:grid-cols-2">
+    <form
+      action={formAction ?? withActionToast(upsertTank, isCreate ? "Tank created" : "Tank saved")}
+      className="grid gap-3 sm:grid-cols-2"
+    >
       {tank ? <input type="hidden" name="id" value={tank.id} /> : null}
       <input type="hidden" name="volume_unit" value={volumeUnit} />
       <input type="hidden" name="water_type" value={waterType} />
@@ -260,6 +263,7 @@ export function TankForm({
           id="water_change_interval_days"
           name="water_change_interval_days"
           type="number"
+          inputMode="numeric"
           defaultValue={tank?.water_change_interval_days ?? 7}
         />
       </div>
@@ -533,7 +537,7 @@ export function TankForm({
         </>
       )}
 
-      <SubmitButton className="min-h-11 sm:col-span-2 sm:min-h-8" successMessage={isCreate ? "Tank created" : "Tank saved"}>
+      <SubmitButton className="min-h-11 sm:col-span-2 sm:min-h-8">
         {isCreate ? "Create tank" : "Save tank"}
       </SubmitButton>
     </form>

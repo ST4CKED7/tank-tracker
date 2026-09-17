@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SubmitButton } from "@/components/submit-button"
+import { withActionToast } from "@/components/form-success-toast"
 import { SpeciesImage } from "@/components/species-image"
 import { useUnits } from "@/components/units-provider"
 import { displayLength, formatTempRange, lengthLabel, type UnitPrefs } from "@/lib/units"
@@ -147,7 +148,7 @@ export function LivestockAsk({
             {pageResults.map((item) => (
               <form
                 key={`ask-${item.species.id}`}
-                action={addLivestock}
+                action={withActionToast(addLivestock, "Added to tank")}
                 className="rounded-xl border border-primary/10 bg-background/40 p-3"
               >
                 <input type="hidden" name="tank_id" value={tank.id} />
@@ -202,6 +203,7 @@ export function LivestockAsk({
                       id={`ask-qty-${item.species.id}`}
                       name="quantity"
                       type="number"
+                      inputMode="numeric"
                       min={1}
                       defaultValue={1}
                       className="w-20"
@@ -248,7 +250,7 @@ export function LivestockAsk({
                       </select>
                     </div>
                   ) : null}
-                  <SubmitButton size="sm" pendingLabel="Adding…" successMessage="Added to tank">
+                  <SubmitButton size="sm" pendingLabel="Adding…">
                     Add
                   </SubmitButton>
                 </div>

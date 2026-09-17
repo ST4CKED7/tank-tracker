@@ -3,6 +3,7 @@
 import { completeDoseSchedule, deleteDoseSchedule, upsertDoseSchedule } from "@/lib/actions"
 import type { Tables } from "@/lib/database.types"
 import { SubmitButton } from "@/components/submit-button"
+import { withActionToast } from "@/components/form-success-toast"
 import { EmptyState } from "@/components/empty-state"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -31,7 +32,7 @@ export function DoseSchedulePanel({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={upsertDoseSchedule} className="space-y-3">
+          <form action={withActionToast(upsertDoseSchedule, "Schedule saved")} className="space-y-3">
             <input type="hidden" name="tank_id" value={tankId} />
             <div className="space-y-1">
               <Label htmlFor="schedule_product">Product</Label>
@@ -54,7 +55,15 @@ export function DoseSchedulePanel({
             </div>
             <div className="space-y-1">
               <Label htmlFor="schedule_every">Every (days)</Label>
-              <Input id="schedule_every" name="every_days" type="number" min={1} defaultValue={1} required />
+              <Input
+                id="schedule_every"
+                name="every_days"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                defaultValue={1}
+                required
+              />
             </div>
             <div className="space-y-1">
               <Label htmlFor="schedule_target">Target</Label>
@@ -91,7 +100,7 @@ export function DoseSchedulePanel({
                 <Input id="schedule_last" name="last_dosed_at" type="date" />
               </div>
             </div>
-            <SubmitButton className="min-h-11 w-full sm:w-auto" successMessage="Schedule saved">
+            <SubmitButton className="min-h-11 w-full sm:w-auto">
               Save schedule
             </SubmitButton>
           </form>
@@ -135,9 +144,9 @@ export function DoseSchedulePanel({
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <form action={completeDoseSchedule}>
+                  <form action={withActionToast(completeDoseSchedule, "Dose logged")}>
                     <input type="hidden" name="id" value={item.id} />
-                    <SubmitButton size="sm" pendingLabel="Logging…" successMessage="Dose logged">
+                    <SubmitButton size="sm" pendingLabel="Logging…">
                       Dosed today
                     </SubmitButton>
                   </form>

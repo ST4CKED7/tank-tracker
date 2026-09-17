@@ -7,6 +7,7 @@ import { logDose } from "@/lib/actions"
 import type { Tables } from "@/lib/database.types"
 import type { DoseSuggestion } from "@/lib/dose-suggest"
 import { SubmitButton } from "@/components/submit-button"
+import { withActionToast } from "@/components/form-success-toast"
 import { EmptyState } from "@/components/empty-state"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -166,7 +167,7 @@ export function DosingPanel({
             <CardTitle>Log a dose</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={logDose} className="space-y-3">
+            <form action={withActionToast(logDose, "Dose saved")} className="space-y-3">
               <input type="hidden" name="tank_id" value={tankId} />
               <div className="space-y-1">
                 <Label htmlFor="product">Product</Label>
@@ -228,7 +229,7 @@ export function DosingPanel({
                   )}
                 </select>
               </div>
-              <SubmitButton className="min-h-11 w-full sm:w-auto" pendingLabel="Saving…" successMessage="Dose saved">
+              <SubmitButton className="min-h-11 w-full sm:w-auto" pendingLabel="Saving…">
                 Save dose
               </SubmitButton>
             </form>

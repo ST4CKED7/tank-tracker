@@ -17,9 +17,9 @@ const MAX_IN_FLIGHT = 3
 let inFlight = 0
 const waitQueue: Array<() => void> = []
 
-/** Known wrong auto-matches (insects/plants/shared clown morphs) that should be re-resolved. */
+/** Known wrong auto-matches (insects/plants/shared clown & betta morphs) that should be re-resolved. */
 const BAD_IMAGE_RE =
-  /photos\/(39295509|3027303|29616601|28590571)(?:\/|\.|$)|Allocapnia|flowering.?plant|Clown_fish_in_the_Andaman_Coral_Reef/i
+  /photos\/(39295509|3027303|29616601|28590571|564865375|564865351|36931664|13015850)(?:\/|\.|$)|Allocapnia|flowering.?plant|Clown_fish_in_the_Andaman_Coral_Reef/i
 
 function usableSrc(src?: string | null, commonName?: string) {
   if (!src) return null

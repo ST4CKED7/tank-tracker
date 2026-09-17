@@ -5,6 +5,7 @@ import { deleteEquipment, serviceEquipment, upsertEquipment } from "@/lib/action
 import type { Tables } from "@/lib/database.types"
 import { defaultServiceDays, EQUIPMENT_TYPE_GROUPS } from "@/lib/equipment-types"
 import { SubmitButton } from "@/components/submit-button"
+import { withActionToast } from "@/components/form-success-toast"
 import { EmptyState } from "@/components/empty-state"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -25,7 +26,7 @@ export function EquipmentPanel({ tankId, equipment }: { tankId: string; equipmen
           <CardDescription>Track filters, pumps, lights, reactors, and anything else you service on a schedule.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={upsertEquipment} className="space-y-3">
+          <form action={withActionToast(upsertEquipment, "Gear saved")} className="space-y-3">
             <input type="hidden" name="tank_id" value={tankId} />
             <div className="space-y-1">
               <Label htmlFor="name">Name</Label>
@@ -58,6 +59,7 @@ export function EquipmentPanel({ tankId, equipment }: { tankId: string; equipmen
                 id="service_every_days"
                 name="service_every_days"
                 type="number"
+                inputMode="numeric"
                 min={1}
                 defaultValue={serviceDefault}
               />
@@ -71,7 +73,7 @@ export function EquipmentPanel({ tankId, equipment }: { tankId: string; equipmen
               <Label htmlFor="last_serviced_at">Last serviced</Label>
               <Input id="last_serviced_at" name="last_serviced_at" type="date" />
             </div>
-            <SubmitButton className="min-h-11 w-full sm:w-auto" successMessage="Gear saved">
+            <SubmitButton className="min-h-11 w-full sm:w-auto">
               Save
             </SubmitButton>
           </form>
@@ -105,9 +107,9 @@ export function EquipmentPanel({ tankId, equipment }: { tankId: string; equipmen
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <form action={serviceEquipment}>
+                  <form action={withActionToast(serviceEquipment, "Marked serviced")}>
                     <input type="hidden" name="id" value={item.id} />
-                    <SubmitButton size="sm" pendingLabel="Saving…" successMessage="Marked serviced">
+                    <SubmitButton size="sm" pendingLabel="Saving…">
                       Serviced today
                     </SubmitButton>
                   </form>

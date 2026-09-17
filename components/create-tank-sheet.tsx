@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { upsertTank } from "@/lib/actions"
 import { TankForm } from "@/components/tank-form"
+import { withActionToast } from "@/components/form-success-toast"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -17,10 +18,7 @@ import { Plus } from "lucide-react"
 export function CreateTankSheet() {
   const [open, setOpen] = useState(false)
 
-  async function createTank(formData: FormData) {
-    await upsertTank(formData)
-    setOpen(false)
-  }
+  const createTank = withActionToast(upsertTank, "Tank created", { onSuccess: () => setOpen(false) })
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

@@ -2,36 +2,34 @@
 
 import { useFormStatus } from "react-dom"
 import { Button } from "@/components/ui/button"
-import { FormSuccessToast } from "@/components/form-success-toast"
 import type { ComponentProps } from "react"
 
 type Props = ComponentProps<typeof Button> & {
   pendingLabel?: string
-  successMessage?: string
 }
 
-/** Instant feedback for server-action forms — disables + shows pending label. */
+/**
+ * Instant feedback for server-action forms — disables + shows pending label.
+ * Success/failure toasts belong on the form's action via `withActionToast`,
+ * which knows the outcome; the button only knows that a submit happened.
+ */
 export function SubmitButton({
   children,
   pendingLabel = "Saving…",
-  successMessage,
   disabled,
   className,
   ...props
 }: Props) {
   const { pending } = useFormStatus()
   return (
-    <>
-      {successMessage ? <FormSuccessToast message={successMessage} /> : null}
-      <Button
-        type="submit"
-        disabled={disabled || pending}
-        aria-busy={pending}
-        className={className}
-        {...props}
-      >
-        {pending ? pendingLabel : children}
-      </Button>
-    </>
+    <Button
+      type="submit"
+      disabled={disabled || pending}
+      aria-busy={pending}
+      className={className}
+      {...props}
+    >
+      {pending ? pendingLabel : children}
+    </Button>
   )
 }

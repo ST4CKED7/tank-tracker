@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SubmitButton } from "@/components/submit-button"
+import { withActionToast } from "@/components/form-success-toast"
 import { useUnits } from "@/components/units-provider"
 import { formatTimerClock, useTestTimers } from "@/components/test-timer-provider"
 import { cn } from "@/lib/utils"
@@ -52,13 +53,15 @@ export function QuickRetestButton({
           aria-label={`Retest ${label}`}
           title={`Retest ${label}`}
           className={cn(
-            "inline-flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors",
+            "relative inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
+            // Invisible 44px-tall hit area so wet fingers don't need to be precise.
+            "after:absolute after:inset-x-0 after:-inset-y-1.5",
             "hover:bg-muted hover:text-foreground",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
             className,
           )}
         >
-          <FlaskConical className="size-3.5" aria-hidden="true" />
+          <FlaskConical className="size-4" aria-hidden="true" />
         </button>
       </DialogTrigger>
       <DialogContent className="gap-2 overflow-hidden p-3 sm:max-w-md">
@@ -110,10 +113,7 @@ function QuickRetestBody({
       ? Number((drops * guide.titration.dropUnit).toFixed(2))
       : Number(value)
 
-  async function save(formData: FormData) {
-    await logTest(formData)
-    onSaved()
-  }
+  const save = withActionToast(logTest, `${meta.label} saved`, { onSuccess: onSaved })
 
   const hasTimers = Boolean(guide?.waitSeconds || guide?.shakeSeconds || guide?.bottleShakeSeconds)
 
@@ -222,6 +222,7 @@ function QuickRetestBody({
               <Input
                 id={`quick-drops-${parameter}`}
                 type="number"
+                inputMode="numeric"
                 min={0}
                 step={1}
                 className="h-8"
@@ -313,7 +314,7 @@ function QuickRetestBody({
           </div>
         )}
 
-        <SubmitButton className="h-9 min-h-9" pendingLabel="Saving…" successMessage={`${meta.label} saved`}>
+        <SubmitButton className="h-9 min-h-9" pendingLabel="Saving…">
           Save reading
         </SubmitButton>
       </form>

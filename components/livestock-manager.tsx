@@ -15,6 +15,7 @@ import type { ParameterKey } from "@/lib/parameters"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/empty-state"
 import { SubmitButton } from "@/components/submit-button"
+import { withActionToast } from "@/components/form-success-toast"
 import { CompatibilityWarnings, guardCompatSubmit } from "@/components/compatibility-warnings"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -351,7 +352,10 @@ export function LivestockManager({
                 </div>
 
                 {(item.species.kind === "fish" || item.species.kind === "coral" || item.species.kind === "invert") ? (
-                  <form action={updateLivestock} className="flex flex-wrap items-end gap-2 border-t border-primary/10 pt-3">
+                  <form
+                    action={withActionToast(updateLivestock, "Updated")}
+                    className="flex flex-wrap items-end gap-2 border-t border-primary/10 pt-3"
+                  >
                     <input type="hidden" name="id" value={item.id} />
                     {unitFields}
                     <div className="space-y-1">
@@ -416,12 +420,13 @@ export function LivestockManager({
                         id={`qty-edit-${item.id}`}
                         name="quantity"
                         type="number"
+                        inputMode="numeric"
                         min={1}
                         defaultValue={item.quantity}
                         className="w-20"
                       />
                     </div>
-                    <SubmitButton size="sm" variant="secondary" pendingLabel="Updating…" successMessage="Updated">
+                    <SubmitButton size="sm" variant="secondary" pendingLabel="Updating…">
                       Update
                     </SubmitButton>
                   </form>
@@ -499,7 +504,7 @@ export function LivestockManager({
                     return (
               <form
                 key={species.id}
-                action={addLivestock}
+                action={withActionToast(addLivestock, "Added to tank")}
                 onSubmit={(event) => guardCompatSubmit(report.severity, event)}
                 className={cn(
                   "rounded-xl border border-primary/10 bg-card/70 p-3 text-sm shadow-sm border-l-4",
@@ -557,7 +562,15 @@ export function LivestockManager({
                   </div>
                   <div>
                     <Label htmlFor={`qty-${species.id}`}>Qty</Label>
-                    <Input id={`qty-${species.id}`} name="quantity" type="number" min={1} defaultValue={1} className="w-20" />
+                    <Input
+                      id={`qty-${species.id}`}
+                      name="quantity"
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      defaultValue={1}
+                      className="w-20"
+                    />
                   </div>
                   {species.kind === "fish" || species.kind === "invert" ? (
                     <div>
@@ -604,7 +617,6 @@ export function LivestockManager({
                     size="sm"
                     variant={report.severity === "block" ? "destructive" : "default"}
                     pendingLabel="Adding…"
-                    successMessage="Added to tank"
                   >
                     {report.severity === "block" ? "Add anyway" : "Add"}
                   </SubmitButton>
@@ -618,7 +630,10 @@ export function LivestockManager({
           </div>
           <details className="rounded-lg border p-4">
             <summary className="cursor-pointer font-medium">Add a custom species</summary>
-            <form action={addCustomSpecies} className="mt-4 grid gap-3 sm:grid-cols-2">
+            <form
+              action={withActionToast(addCustomSpecies, "Custom species saved")}
+              className="mt-4 grid gap-3 sm:grid-cols-2"
+            >
               {unitFields}
               <input type="hidden" name="water_type" value={fw ? "freshwater" : "saltwater"} />
               <div className="space-y-1 sm:col-span-2">
@@ -668,7 +683,7 @@ export function LivestockManager({
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea id="notes" name="notes" />
               </div>
-              <SubmitButton className="min-h-11" pendingLabel="Saving…" successMessage="Custom species saved">
+              <SubmitButton className="min-h-11" pendingLabel="Saving…">
                 Save species
               </SubmitButton>
             </form>

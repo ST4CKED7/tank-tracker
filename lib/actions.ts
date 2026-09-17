@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { actionFailed, type ActionResult } from "@/lib/action-result"
 import { clearActiveTankIdCookie, writeActiveTankIdCookie } from "@/lib/active-tank"
 import { createClient } from "@/lib/supabase/server"
 import type { ParameterKey } from "@/lib/parameters"
@@ -100,7 +101,7 @@ export async function deleteTank(formData: FormData) {
   redirect("/settings")
 }
 
-export async function upsertTank(formData: FormData) {
+export async function upsertTank(formData: FormData): Promise<ActionResult> {
   const { supabase, userId } = await requireUser()
   const id = String(formData.get("id") || "")
   const waterType = String(formData.get("water_type") || "saltwater") === "freshwater" ? "freshwater" : "saltwater"
@@ -150,14 +151,15 @@ export async function upsertTank(formData: FormData) {
   }
   if (id) {
     const { error } = await supabase.from("tanks").update(payload).eq("id", id).eq("user_id", userId)
-    if (error) throw error
+    if (error) return actionFailed(error, "Could not save the tank.")
     await writeActiveTankIdCookie(id)
   } else {
     const { data, error } = await supabase.from("tanks").insert(payload).select("id").single()
-    if (error) throw error
+    if (error) return actionFailed(error, "Could not create the tank.")
     if (data?.id) await writeActiveTankIdCookie(data.id)
   }
   revalidateTankShell()
+  return { ok: true }
 }
 
 export async function toggleFavoriteTestKit(formData: FormData) {
@@ -305,11 +307,16 @@ export async function updateParameterTargets(formData: FormData) {
   revalidateAppPaths("/", "/tests", "/charts", "/dosing")
 }
 
-export async function logTest(formData: FormData) {
+export async function logTest(formData: FormData): Promise<ActionResult> {
   const { supabase, userId } = await requireUser()
-  const tankId = String(formData.get("tank_id"))
+  const tankId = String(formData.get("tank_id") || "")
+  if (!tankId) return { ok: false, error: "No tank selected." }
   const parameter = String(formData.get("parameter")) as ParameterKey
-  let value = Number(formData.get("value"))
+  const rawValue = formData.get("value")
+  let value = Number(rawValue)
+  if (rawValue == null || String(rawValue).trim() === "" || !Number.isFinite(value)) {
+    return { ok: false, error: "Enter a number for the reading." }
+  }
   let unit = String(formData.get("unit") || "")
   if (parameter === "temperature") {
     const rawTempUnit = String(formData.get("temp_unit") || "")
@@ -330,15 +337,17 @@ export async function logTest(formData: FormData) {
     notes: String(formData.get("notes") || "") || null,
     tested_at: String(formData.get("tested_at") || new Date().toISOString()),
   })
-  if (error) throw error
+  if (error) return actionFailed(error, "Could not save the reading.")
   // Only refresh pages that show readings immediately — avoid a multi-route cascade on every save.
   revalidatePath("/tests")
   revalidatePath("/")
+  return { ok: true }
 }
 
-export async function logWaterChange(formData: FormData) {
+export async function logWaterChange(formData: FormData): Promise<ActionResult> {
   const { supabase, userId } = await requireUser()
-  const tankId = String(formData.get("tank_id"))
+  const tankId = String(formData.get("tank_id") || "")
+  if (!tankId) return { ok: false, error: "No tank selected." }
   const prefs = await tankPrefs(supabase, tankId)
   const { error } = await supabase.from("water_changes").insert({
     user_id: userId,
@@ -348,8 +357,9 @@ export async function logWaterChange(formData: FormData) {
     notes: String(formData.get("notes") || "") || null,
     changed_at: String(formData.get("changed_at") || new Date().toISOString()),
   })
-  if (error) throw error
+  if (error) return actionFailed(error, "Could not save the water change.")
   revalidateAppPaths("/", "/tests", "/charts")
+  return { ok: true }
 }
 
 export async function cacheSpeciesImage(speciesId: string, imageUrl: string) {
@@ -365,7 +375,7 @@ function prefsFromForm(formData: FormData): UnitPrefs {
   }
 }
 
-export async function addLivestock(formData: FormData) {
+export async function addLivestock(formData: FormData): Promise<ActionResult> {
   const { supabase, userId } = await requireUser()
   const rawSize = String(formData.get("coral_size") || "")
   const coralSize =
@@ -387,11 +397,12 @@ export async function addLivestock(formData: FormData) {
     sex: parseLivestockSex(formData.get("sex")),
     added_on: String(formData.get("added_on") || new Date().toISOString().slice(0, 10)),
   })
-  if (error) throw error
+  if (error) return actionFailed(error, "Could not add to the tank.")
   revalidateAppPaths("/", "/livestock")
+  return { ok: true }
 }
 
-export async function updateLivestock(formData: FormData) {
+export async function updateLivestock(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireUser()
   const prefs = prefsFromForm(formData)
   const rawSize = String(formData.get("coral_size") || "")
@@ -420,8 +431,9 @@ export async function updateLivestock(formData: FormData) {
     payload.sex = parseLivestockSex(formData.get("sex"))
   }
   const { error } = await supabase.from("livestock").update(payload).eq("id", String(formData.get("id")))
-  if (error) throw error
+  if (error) return actionFailed(error, "Could not update this one.")
   revalidateAppPaths("/", "/livestock")
+  return { ok: true }
 }
 
 export async function removeLivestock(formData: FormData) {
@@ -431,7 +443,7 @@ export async function removeLivestock(formData: FormData) {
   revalidateAppPaths("/", "/livestock")
 }
 
-export async function addCustomSpecies(formData: FormData) {
+export async function addCustomSpecies(formData: FormData): Promise<ActionResult> {
   const { supabase, userId } = await requireUser()
   const kind = String(formData.get("kind") || "fish") as "fish" | "coral" | "invert" | "plant"
   const waterType = String(formData.get("water_type") || "saltwater") === "freshwater" ? "freshwater" : "saltwater"
@@ -480,11 +492,12 @@ export async function addCustomSpecies(formData: FormData) {
     po4_max: Number(formData.get("po4_max") || (fw ? 1 : 0.1)),
     notes: String(formData.get("notes") || "") || null,
   })
-  if (error) throw error
+  if (error) return actionFailed(error, "Could not save the species.")
   revalidateAppPaths("/livestock")
+  return { ok: true }
 }
 
-export async function logDose(formData: FormData) {
+export async function logDose(formData: FormData): Promise<ActionResult> {
   const { supabase, userId } = await requireUser()
   const { error } = await supabase.from("dose_logs").insert({
     user_id: userId,
@@ -495,11 +508,12 @@ export async function logDose(formData: FormData) {
     target_parameter: String(formData.get("target_parameter") || "") || null,
     dosed_at: String(formData.get("dosed_at") || new Date().toISOString()),
   })
-  if (error) throw error
+  if (error) return actionFailed(error, "Could not save the dose.")
   revalidateAppPaths("/dosing", "/")
+  return { ok: true }
 }
 
-export async function upsertDoseSchedule(formData: FormData) {
+export async function upsertDoseSchedule(formData: FormData): Promise<ActionResult> {
   const { supabase, userId } = await requireUser()
   const id = String(formData.get("id") || "")
   const payload = {
@@ -516,18 +530,19 @@ export async function upsertDoseSchedule(formData: FormData) {
   }
   if (id) {
     const { error } = await supabase.from("dose_schedules").update(payload).eq("id", id)
-    if (error) throw error
+    if (error) return actionFailed(error, "Could not save the schedule.")
   } else {
     const { error } = await supabase.from("dose_schedules").insert(payload)
-    if (error) throw error
+    if (error) return actionFailed(error, "Could not save the schedule.")
   }
   revalidateAppPaths("/", "/dosing")
+  return { ok: true }
 }
 
-export async function completeDoseSchedule(formData: FormData) {
+export async function completeDoseSchedule(formData: FormData): Promise<ActionResult> {
   const { supabase, userId } = await requireUser()
   const id = String(formData.get("id") || "")
-  if (!id) return
+  if (!id) return { ok: false, error: "Missing schedule." }
 
   const { data: schedule } = await supabase
     .from("dose_schedules")
@@ -535,7 +550,7 @@ export async function completeDoseSchedule(formData: FormData) {
     .eq("id", id)
     .eq("user_id", userId)
     .maybeSingle()
-  if (!schedule) return
+  if (!schedule) return { ok: false, error: "Schedule not found." }
 
   const today = new Date().toISOString().slice(0, 10)
   const [{ error: logError }, { error: updateError }] = await Promise.all([
@@ -550,9 +565,10 @@ export async function completeDoseSchedule(formData: FormData) {
     }),
     supabase.from("dose_schedules").update({ last_dosed_at: today }).eq("id", id),
   ])
-  if (logError) throw logError
-  if (updateError) throw updateError
+  if (logError) return actionFailed(logError, "Could not log the dose.")
+  if (updateError) return actionFailed(updateError, "Logged the dose, but could not update the schedule.")
   revalidateAppPaths("/", "/dosing")
+  return { ok: true }
 }
 
 export async function deleteDoseSchedule(formData: FormData) {
@@ -738,7 +754,7 @@ export async function deleteTankPhoto(formData: FormData) {
   revalidateAppPaths("/photos", "/")
 }
 
-export async function upsertEquipment(formData: FormData) {
+export async function upsertEquipment(formData: FormData): Promise<ActionResult> {
   const { supabase, userId } = await requireUser()
   const id = String(formData.get("id") || "")
   const payload = {
@@ -753,22 +769,24 @@ export async function upsertEquipment(formData: FormData) {
   }
   if (id) {
     const { error } = await supabase.from("equipment").update(payload).eq("id", id)
-    if (error) throw error
+    if (error) return actionFailed(error, "Could not save this gear.")
   } else {
     const { error } = await supabase.from("equipment").insert(payload)
-    if (error) throw error
+    if (error) return actionFailed(error, "Could not save this gear.")
   }
   revalidateAppPaths("/", "/equipment")
+  return { ok: true }
 }
 
-export async function serviceEquipment(formData: FormData) {
+export async function serviceEquipment(formData: FormData): Promise<ActionResult> {
   const { supabase } = await requireUser()
   const { error } = await supabase
     .from("equipment")
     .update({ last_serviced_at: new Date().toISOString().slice(0, 10) })
     .eq("id", String(formData.get("id")))
-  if (error) throw error
+  if (error) return actionFailed(error, "Could not mark this serviced.")
   revalidateAppPaths("/", "/equipment")
+  return { ok: true }
 }
 
 export async function deleteEquipment(formData: FormData) {
